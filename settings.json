@@ -1,0 +1,12 @@
+{
+  "move_up": "W",
+  "move_left": "A",
+  "move_down": "S",
+  "move_right": "D",
+  "attack": "LeftClick",
+  "dash": "Space",
+  "block": "RightClick",
+  "pick_up": "E",
+  "toggle_inv": "C",
+  "special_item": "Q"
+}

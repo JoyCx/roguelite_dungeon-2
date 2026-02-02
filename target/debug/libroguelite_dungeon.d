@@ -1,0 +1,1 @@
+C:\Users\ilaya\roguelite_dungeon\ 2\target\debug\libroguelite_dungeon.rlib: C:\Users\ilaya\roguelite_dungeon\ 2\src\lib.rs C:\Users\ilaya\roguelite_dungeon\ 2\src\model\character.rs C:\Users\ilaya\roguelite_dungeon\ 2\src\model\floor.rs C:\Users\ilaya\roguelite_dungeon\ 2\src\model\mod.rs C:\Users\ilaya\roguelite_dungeon\ 2\src\model\settings.rs
