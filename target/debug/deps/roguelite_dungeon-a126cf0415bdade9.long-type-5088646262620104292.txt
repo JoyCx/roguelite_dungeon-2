@@ -1,0 +1,2 @@
+model::attack_pattern::_::<impl model::attack_pattern::_::_serde::Deserialize<'de> for model::attack_pattern::AnimationFrame>::deserialize::__Field
+model::attack_pattern::_::<impl model::attack_pattern::_::_serde::Deserialize<'de> for model::attack_pattern::AttackPattern>::deserialize::__Field

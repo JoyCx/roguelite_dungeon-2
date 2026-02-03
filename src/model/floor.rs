@@ -1,3 +1,4 @@
+use crate::model::item::ItemDrop;
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
 use ratatui::style::{Color, Style};
@@ -22,6 +23,8 @@ pub struct Floor {
     pub seed: u64,
     pub rooms: Vec<Room>,
     pub tile_to_room: Vec<Option<RoomId>>,
+    pub items: Vec<ItemDrop>,
+    pub enemies: Vec<crate::model::enemy::Enemy>,
 }
 
 impl Floor {
@@ -33,6 +36,8 @@ impl Floor {
             seed,
             rooms: Vec::new(),
             tile_to_room: vec![None; (width * height) as usize],
+            items: Vec::new(),
+            enemies: Vec::new(),
         };
         floor.generate();
         floor.detect_rooms();
@@ -96,7 +101,7 @@ impl Floor {
         self.connect_caves();
     }
 
-    fn get_tile(&self, x: i32, y: i32) -> bool {
+    pub fn get_tile(&self, x: i32, y: i32) -> bool {
         if x < 0 || x >= self.width || y < 0 || y >= self.height {
             true
         } else {
@@ -235,31 +240,11 @@ impl Floor {
 
     pub fn is_walkable(&self, x: i32, y: i32) -> bool {
         if x < 0 || x >= self.width || y < 0 || y >= self.height {
-            let msg = format!("is_walkable({}, {}) = false (out of bounds)\n", x, y);
-            let _ = std::fs::OpenOptions::new()
-                .create(true)
-                .append(true)
-                .open("log.txt")
-                .and_then(|mut f| std::io::Write::write_all(&mut f, msg.as_bytes()));
             return false;
         }
 
         let tile_val = self.get_tile(x, y);
-        let walkable = !tile_val;
-        let msg = format!(
-            "is_walkable({}, {}) = {} (tile={}, is_wall={})\n",
-            x,
-            y,
-            walkable,
-            self.tiles[(y * self.width + x) as usize],
-            tile_val
-        );
-        let _ = std::fs::OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open("log.txt")
-            .and_then(|mut f| std::io::Write::write_all(&mut f, msg.as_bytes()));
-        walkable
+        !tile_val
     }
 
     fn detect_rooms(&mut self) {
@@ -465,6 +450,278 @@ impl Floor {
             }
         }
         count
+    }
+
+    pub fn add_item(&mut self, item: ItemDrop) {
+        self.items.push(item);
+    }
+
+    pub fn items_at(&self, x: i32, y: i32) -> Vec<&ItemDrop> {
+        self.items
+            .iter()
+            .filter(|item| item.x == x && item.y == y)
+            .collect()
+    }
+
+    pub fn items_at_mut(&mut self, x: i32, y: i32) -> Vec<&mut ItemDrop> {
+        self.items
+            .iter_mut()
+            .filter(|item| item.x == x && item.y == y)
+            .collect()
+    }
+
+    pub fn pickup_item(&mut self, x: i32, y: i32) -> Option<ItemDrop> {
+        // Find the actual index in self.items of an item at (x, y)
+        if let Some(pos) = self
+            .items
+            .iter()
+            .position(|item| item.x == x && item.y == y)
+        {
+            Some(self.items.remove(pos))
+        } else {
+            None
+        }
+    }
+
+    /// Find a random spawn position for the player
+    /// Ensures the player spawns:
+    /// - In a walkable space (not a wall)
+    /// - In the largest connected region of the map (to avoid isolated pockets)
+    /// - At a random location (not always the same spot)
+    pub fn find_player_spawn(&self) -> Option<(i32, i32)> {
+        use rand::Rng;
+
+        // Find all walkable tiles and identify the largest connected region
+        let mut visited = vec![false; (self.width * self.height) as usize];
+        let mut largest_region_start = None;
+        let mut largest_region_size = 0;
+
+        for y in 0..self.height {
+            for x in 0..self.width {
+                let idx = (y * self.width + x) as usize;
+                if self.is_walkable(x, y) && !visited[idx] {
+                    // BFS to find all connected walkable tiles and count them
+                    let mut region_size = 0;
+                    let mut queue = VecDeque::new();
+
+                    queue.push_back((x, y));
+                    visited[idx] = true;
+
+                    while let Some((cx, cy)) = queue.pop_front() {
+                        region_size += 1;
+
+                        // Check all 4 adjacent tiles
+                        for (dx, dy) in &[(0, 1), (0, -1), (1, 0), (-1, 0)] {
+                            let nx = cx + dx;
+                            let ny = cy + dy;
+                            if nx >= 0 && nx < self.width && ny >= 0 && ny < self.height {
+                                let n_idx = (ny * self.width + nx) as usize;
+                                if self.is_walkable(nx, ny) && !visited[n_idx] {
+                                    visited[n_idx] = true;
+                                    queue.push_back((nx, ny));
+                                }
+                            }
+                        }
+                    }
+
+                    // Keep track of the largest region
+                    if region_size > largest_region_size {
+                        largest_region_size = region_size;
+                        largest_region_start = Some((x, y));
+                    }
+                }
+            }
+        }
+
+        // Now that we know the start of the largest region, do another BFS to collect positions
+        if let Some((start_x, start_y)) = largest_region_start {
+            let mut visited2 = vec![false; (self.width * self.height) as usize];
+            let mut region_tiles = Vec::new();
+            let mut queue = VecDeque::new();
+
+            let start_idx = (start_y * self.width + start_x) as usize;
+            queue.push_back((start_x, start_y));
+            visited2[start_idx] = true;
+
+            while let Some((cx, cy)) = queue.pop_front() {
+                region_tiles.push((cx, cy));
+
+                for (dx, dy) in &[(0, 1), (0, -1), (1, 0), (-1, 0)] {
+                    let nx = cx + dx;
+                    let ny = cy + dy;
+                    if nx >= 0 && nx < self.width && ny >= 0 && ny < self.height {
+                        let n_idx = (ny * self.width + nx) as usize;
+                        if self.is_walkable(nx, ny) && !visited2[n_idx] {
+                            visited2[n_idx] = true;
+                            queue.push_back((nx, ny));
+                        }
+                    }
+                }
+            }
+
+            // Spawn in a random location within the largest region
+            if !region_tiles.is_empty() {
+                let mut rng = rand::thread_rng();
+                let idx = rng.gen_range(0..region_tiles.len());
+                return Some(region_tiles[idx]);
+            }
+        }
+
+        None
+    }
+
+    pub fn spawn_random_items(
+        &mut self,
+        count: i32,
+        difficulty: &crate::model::item_tier::Difficulty,
+    ) {
+        use crate::model::consumable::{Consumable, ConsumableType};
+        use crate::model::item_tier::ItemTier;
+
+        let mut rng = StdRng::seed_from_u64(self.seed.wrapping_add(999));
+        let consumable_types = [
+            ConsumableType::WeakHealingDraught,
+            ConsumableType::BandageRoll,
+            ConsumableType::AntitoxinVial,
+            ConsumableType::FireOilFlask,
+            ConsumableType::BlessedBread,
+        ];
+
+        let all_tiers = [
+            ItemTier::Common,
+            ItemTier::Rare,
+            ItemTier::Epic,
+            ItemTier::Exotic,
+            ItemTier::Legendary,
+            ItemTier::Mythic,
+            ItemTier::Godly,
+        ];
+
+        let mut spawned = 0;
+        let mut total_attempts = 0;
+        let max_total_attempts = (count as usize) * 100; // Prevent infinite loop
+
+        while spawned < count && total_attempts < max_total_attempts {
+            total_attempts += 1;
+            let mut attempts = 0;
+            while attempts < 50 {
+                let x = rng.random_range(1..self.width - 1);
+                let y = rng.random_range(1..self.height - 1);
+
+                if !self.get_tile(x, y) && !self.item_exists_at(x, y) {
+                    // It's a floor tile with no item, spawn item here
+
+                    // Determine tier based on difficulty drop chances
+                    let tier = self.determine_tier(&mut rng, difficulty, &all_tiers);
+
+                    let idx = rng.random_range(0..consumable_types.len());
+                    let consumable_type = consumable_types[idx].clone();
+                    let consumable = Consumable::new(consumable_type);
+                    let item = ItemDrop::consumable_with_tier(consumable, x, y, tier);
+                    self.add_item(item);
+                    spawned += 1;
+                    break;
+                }
+                attempts += 1;
+            }
+        }
+    }
+
+    /// Spawn enemies scaled by difficulty
+    /// Spawns 5-15 enemies depending on difficulty
+    /// Ensures no overlaps with items, other enemies, or walls
+    pub fn spawn_enemies(&mut self, difficulty: &crate::model::item_tier::Difficulty) {
+        use crate::model::enemy_type;
+
+        let mut rng = StdRng::seed_from_u64(self.seed.wrapping_add(1337));
+
+        // Determine number of enemies based on difficulty
+        let enemy_count = match difficulty {
+            crate::model::item_tier::Difficulty::Easy => rng.random_range(5..8),
+            crate::model::item_tier::Difficulty::Normal => rng.random_range(8..12),
+            crate::model::item_tier::Difficulty::Hard => rng.random_range(12..16),
+            crate::model::item_tier::Difficulty::Death => rng.random_range(15..20),
+        };
+
+        // Get available enemy templates for this difficulty
+        let templates = enemy_type::get_enemies_for_difficulty(difficulty);
+
+        let mut spawned = 0;
+        let mut total_attempts = 0;
+        let max_total_attempts = (enemy_count as usize) * 100;
+
+        while spawned < enemy_count && total_attempts < max_total_attempts {
+            total_attempts += 1;
+            let mut attempts = 0;
+
+            while attempts < 50 {
+                let x = rng.random_range(1..self.width - 1);
+                let y = rng.random_range(1..self.height - 1);
+
+                // Check if position is valid: floor tile, no item, no other enemy
+                if !self.get_tile(x, y) && !self.item_exists_at(x, y) && !self.enemy_exists_at(x, y)
+                {
+                    // Pick random enemy template
+                    let template_idx = rng.random_range(0..templates.len());
+                    let template = templates[template_idx].clone();
+
+                    // Create enemy from template
+                    let mut enemy = crate::model::enemy::Enemy::new(x, y, template.speed);
+                    enemy.health = template.health;
+                    enemy.max_health = template.health;
+                    enemy.rarity = template.rarity.clone();
+                    enemy.base_gold = template.rarity.calculate_gold_drop(difficulty);
+
+                    self.enemies.push(enemy);
+                    spawned += 1;
+                    break;
+                }
+                attempts += 1;
+            }
+        }
+    }
+
+    /// Check if an enemy already exists at this position
+    pub fn enemy_exists_at(&self, x: i32, y: i32) -> bool {
+        self.enemies
+            .iter()
+            .any(|enemy| enemy.position.x == x && enemy.position.y == y)
+    }
+
+    /// Check if an item already exists at this position
+    pub fn item_exists_at(&self, x: i32, y: i32) -> bool {
+        self.items.iter().any(|item| item.x == x && item.y == y)
+    }
+
+    /// Determine item tier based on difficulty drop chances
+    fn determine_tier(
+        &self,
+        rng: &mut StdRng,
+        difficulty: &crate::model::item_tier::Difficulty,
+        tiers: &[crate::model::item_tier::ItemTier],
+    ) -> crate::model::item_tier::ItemTier {
+        use crate::model::item_tier::ItemTier;
+
+        let roll = rng.random_range(0.0..100.0);
+        let mut cumulative = 0.0;
+
+        // Check from rarest to most common
+        for tier in tiers.iter().rev() {
+            let chance = difficulty.get_tier_drop_chance(tier);
+            cumulative += chance;
+            if roll <= cumulative {
+                return tier.clone();
+            }
+        }
+
+        // Fallback to common if something goes wrong
+        ItemTier::Common
+    }
+
+    pub fn update_items(&mut self, delta: f32) {
+        for item in &mut self.items {
+            item.update(delta);
+        }
     }
 }
 

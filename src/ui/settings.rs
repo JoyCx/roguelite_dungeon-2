@@ -4,16 +4,21 @@ use ratatui::{prelude::*, widgets::*};
 pub fn draw(f: &mut Frame, app: &mut App, area: Rect, pulse: Color) {
     let s = &app.temp_settings;
     let items = vec![
-        format!("Move Up:    [{}]", s.move_up),
-        format!("Move Left:  [{}]", s.move_left),
-        format!("Move Down:  [{}]", s.move_down),
-        format!("Move Right: [{}]", s.move_right),
-        format!("Attack:     [{}]", s.attack),
-        format!("Dash:       [{}]", s.dash),
-        format!("Block:      [{}]", s.block),
-        format!("Pick Up:    [{}]", s.pick_up),
-        format!("Inventory:  [{}]", s.toggle_inv),
-        format!("Special:    [{}]", s.special_item),
+        format!("Move Up:         [{}]", s.move_up),
+        format!("Move Left:       [{}]", s.move_left),
+        format!("Move Down:       [{}]", s.move_down),
+        format!("Move Right:      [{}]", s.move_right),
+        format!("Attack:          [{}]", s.attack),
+        format!("Dash:            [{}]", s.dash),
+        format!("Block:           [{}]", s.block),
+        format!("Inventory Focus: [{}]", s.toggle_inv),
+        format!("Inv Up:          [{}]", s.inventory_up),
+        format!("Inv Down:        [{}]", s.inventory_down),
+        format!("Item Describe:   [{}]", s.item_describe),
+        format!("Pause:           [{}]", s.pause),
+        format!("Special:         [{}]", s.special_item),
+        format!("Difficulty:      [{}]", s.difficulty.name()),
+        format!("Default Difficulty: [{}]", s.default_difficulty.name()),
         "-------------------".to_string(),
         "SAVE CHANGES".to_string(),
         "DISCARD & BACK".to_string(),
@@ -25,11 +30,11 @@ pub fn draw(f: &mut Frame, app: &mut App, area: Rect, pulse: Color) {
         .enumerate()
         .map(|(i, text)| {
             let mut style = Style::default().fg(Color::Gray);
-            if i == 11 {
+            if i == 16 {
                 style = style.fg(Color::Green);
-            } else if i == 12 {
+            } else if i == 17 {
                 style = style.fg(Color::Yellow);
-            } else if i == 13 {
+            } else if i == 18 {
                 style = style.fg(Color::Red);
             }
             ListItem::new(text.as_str()).style(style)

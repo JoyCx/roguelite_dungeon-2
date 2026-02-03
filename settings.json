@@ -6,7 +6,12 @@
   "attack": "LeftClick",
   "dash": "Space",
   "block": "RightClick",
-  "pick_up": "E",
   "toggle_inv": "C",
-  "special_item": "Q"
+  "special_item": "Q",
+  "inventory_up": "Up",
+  "inventory_down": "Down",
+  "item_describe": "Return",
+  "pause": "P",
+  "difficulty": "Normal",
+  "default_difficulty": "Normal"
 }

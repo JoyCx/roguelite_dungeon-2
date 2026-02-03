@@ -7,6 +7,7 @@ pub mod menu;
 pub fn handle_input(app: &mut App, key: KeyEvent) {
     match app.state {
         AppState::MainMenu => handlers::handle_main_menu_input(app, key),
+        AppState::CharacterCreation => handlers::handle_character_creation_input(app, key),
         AppState::Settings => handlers::handle_settings_input(app, key),
         AppState::Game => handlers::handle_game_input(app, key),
         AppState::DevMenu => handlers::handle_dev_menu_input(app, key),
@@ -32,13 +33,22 @@ pub fn handle_mouse_event(app: &mut App, mouse: MouseEvent) {
                         4 => app.temp_settings.attack = k,
                         5 => app.temp_settings.dash = k,
                         6 => app.temp_settings.block = k,
-                        7 => app.temp_settings.pick_up = k,
-                        8 => app.temp_settings.toggle_inv = k,
-                        9 => app.temp_settings.special_item = k,
+                        7 => app.temp_settings.toggle_inv = k,
+                        8 => app.temp_settings.special_item = k,
                         _ => {}
                     }
                     app.settings_mode = crate::app::SettingsMode::Navigating;
                 }
+            }
+            event::MouseEventKind::ScrollUp => app.set_scroll(app.scroll_offset.saturating_sub(2)),
+            event::MouseEventKind::ScrollDown => {
+                app.set_scroll(app.scroll_offset.saturating_add(2))
+            }
+            _ => {}
+        },
+        AppState::Game => match mouse.kind {
+            MouseEventKind::Down(MouseButton::Left) => {
+                app.use_current_weapon();
             }
             event::MouseEventKind::ScrollUp => app.set_scroll(app.scroll_offset.saturating_sub(2)),
             event::MouseEventKind::ScrollDown => {

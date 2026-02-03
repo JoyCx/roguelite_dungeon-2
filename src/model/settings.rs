@@ -1,3 +1,4 @@
+use crate::model::item_tier::Difficulty;
 use serde::{Deserialize, Serialize};
 use std::fs;
 
@@ -10,9 +11,14 @@ pub struct Settings {
     pub attack: String,
     pub dash: String,
     pub block: String,
-    pub pick_up: String,
     pub toggle_inv: String,
     pub special_item: String,
+    pub inventory_up: String,
+    pub inventory_down: String,
+    pub item_describe: String,
+    pub pause: String,
+    pub difficulty: Difficulty,
+    pub default_difficulty: Difficulty,
 }
 
 impl Default for Settings {
@@ -25,9 +31,14 @@ impl Default for Settings {
             attack: "LeftClick".into(),
             dash: "Space".into(),
             block: "RightClick".into(),
-            pick_up: "E".into(),
             toggle_inv: "C".into(),
             special_item: "Q".into(),
+            inventory_up: "Up".into(),
+            inventory_down: "Down".into(),
+            item_describe: "Return".into(),
+            pause: "P".into(),
+            difficulty: Difficulty::Normal,
+            default_difficulty: Difficulty::Normal,
         }
     }
 }

@@ -9,6 +9,8 @@ use std::{
 };
 
 mod app;
+mod colors;
+mod constants;
 mod input;
 mod model;
 mod ui;
@@ -50,6 +52,10 @@ where
         app.update_camera();
 
         app.update_camera_smooth();
+
+        app.update_game_logic();
+
+        app.update_arrows();
 
         terminal.draw(|f| ui::draw(f, app))?;
         app.last_scroll_offset = app.scroll_offset;
