@@ -26,8 +26,8 @@ pub const PLAYER_BOW_COOLDOWN: f32 = 0.3;
 pub const PLAYER_DASH_COOLDOWN: f32 = 5.0;
 pub const PLAYER_BLOCK_COOLDOWN: f32 = 6.0;
 pub const PLAYER_MOVEMENT_SPEED: f32 = 1.0; // Tiles per tick (controlled by GAME_TICK_RATE_MS)
-pub const PLAYER_MOVEMENT_TICKS_REQUIRED: u32 = 3; // Require 3 game ticks between moves (48ms per move = ~21 moves/sec)
-pub const ENEMY_MOVEMENT_TICKS_REQUIRED: u32 = 7; // Enemies move every 7 ticks (112ms per move = ~9 moves/sec)
+pub const PLAYER_MOVEMENT_TICKS_REQUIRED: u32 = 2; // Require 2 game ticks between moves (32ms per move = ~1.95 blocks/sec, ~31 moves/sec)
+pub const ENEMY_MOVEMENT_TICKS_REQUIRED: u32 = 5; // Enemies move every 5 ticks (80ms per move = ~0.78 blocks/sec, ~12.5 moves/sec)
 
 // Enemy combat and gold drops
 pub const ENEMY_BASE_HEALTH: i32 = 20;

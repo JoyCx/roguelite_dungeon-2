@@ -1,7 +1,6 @@
 use ratatui::style::Color;
 use serde::{Deserialize, Serialize};
 
-/// Animation frame for attack visualization
 #[derive(Clone, Debug, PartialEq)]
 pub struct AnimationFrame {
     pub tiles: Vec<(i32, i32)>,
@@ -10,7 +9,7 @@ pub struct AnimationFrame {
     pub frame_duration: f32, // seconds
 }
 
-/// Unified attack pattern system with animations for both player and enemies
+/// Unified attack pattern system for both player and enemies
 /// 12+ unique patterns covering melee, ranged, and magical attacks
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub enum AttackPattern {
