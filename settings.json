@@ -1,0 +1,17 @@
+{
+  "move_up": "W",
+  "move_left": "A",
+  "move_down": "S",
+  "move_right": "D",
+  "attack": "LeftClick",
+  "dash": "Space",
+  "block": "RightClick",
+  "toggle_inv": "C",
+  "special_item": "Q",
+  "inventory_up": "Up",
+  "inventory_down": "Down",
+  "item_describe": "Return",
+  "pause": "P",
+  "difficulty": "Normal",
+  "default_difficulty": "Normal"
+}
