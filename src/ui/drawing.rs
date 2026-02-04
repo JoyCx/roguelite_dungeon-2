@@ -566,3 +566,48 @@ pub fn render_pause_indicator(f: &mut Frame, area: Rect) {
 
     f.render_widget(pause_paragraph, pause_area);
 }
+
+pub fn render_animations(
+    f: &mut Frame,
+    game_area: Rect,
+    animations: &[crate::app::ActiveAnimation],
+    camera_x: i32,
+    camera_y: i32,
+) {
+    for animation in animations {
+        // Get the current frame
+        if let Some(current_frame) = animation.get_current_frame() {
+            // Get a random ASCII character from the animation's category
+            let filter_char = animation.category.get_random_character();
+
+            // Render all tiles in this frame
+            for (world_x, world_y) in &current_frame.tiles {
+                let screen_x = world_x - camera_x;
+                let screen_y = world_y - camera_y;
+
+                // Only render if on screen
+                if screen_x >= 0
+                    && screen_x < game_area.width as i32
+                    && screen_y >= 0
+                    && screen_y < game_area.height as i32
+                {
+                    // Use the random filter character instead of the frame's symbol, but keep the color
+                    let widget = Paragraph::new(filter_char.to_string()).style(
+                        Style::default()
+                            .fg(current_frame.color)
+                            .add_modifier(Modifier::BOLD),
+                    );
+
+                    let area = Rect {
+                        x: game_area.x + screen_x as u16,
+                        y: game_area.y + screen_y as u16,
+                        width: 1,
+                        height: 1,
+                    };
+
+                    f.render_widget(widget, area);
+                }
+            }
+        }
+    }
+}

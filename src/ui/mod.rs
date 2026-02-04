@@ -178,6 +178,9 @@ pub fn draw(f: &mut Frame, app: &mut App) {
                 drawing::render_ultimate_area(f, game_area, ultimate_positions, cx, cy);
             }
 
+            // Render active attack animations
+            drawing::render_animations(f, game_area, &app.active_animations, cx, cy);
+
             // RENDER PLAYER LAST - so they always appear on top of other entities and effects
             let screen_x = px - cx;
             let screen_y = py - cy;

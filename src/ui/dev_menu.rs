@@ -29,7 +29,7 @@ pub fn draw(f: &mut Frame, app: &mut App, area: Rect) {
     };
 
     let input_text = if app.dev_seed_input.is_empty() {
-        "[Commands: R=Random | ENTER=Generate | E=Spawn Enemy | D=Damage Test | G=Add Gold | A=Cycle Attack Pattern | P=Play | ESC=Back]"
+        "[Commands: R=Random | ENTER=Generate | E=Spawn Enemy | D=Damage Test | G=Add Gold | H=Cycle Attack Pattern | P=Play | ESC=Back]"
             .to_string()
     } else {
         format!("Seed Input: {}", app.dev_seed_input)
@@ -92,6 +92,9 @@ pub fn draw(f: &mut Frame, app: &mut App, area: Rect) {
         );
 
         f.render_widget(map_widget, preview_chunks[0]);
+
+        // Render active animations on top of the map
+        super::drawing::render_animations(f, preview_chunks[0], &app.active_animations, 0, 0);
 
         // Enemy list panel
         let mut enemy_lines = vec![
@@ -235,7 +238,7 @@ pub fn handle_input(app: &mut App, key: crossterm::event::KeyCode) {
             // Add gold for testing
             app.character.gold += 50;
         }
-        KeyCode::Char('a') | KeyCode::Char('A') => {
+        KeyCode::Char('h') | KeyCode::Char('H') => {
             // Cycle attack pattern for testing
             app.cycle_dev_attack_pattern();
         }
