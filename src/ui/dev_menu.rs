@@ -67,21 +67,16 @@ pub fn draw(f: &mut Frame, app: &mut App, area: Rect) {
             .split(chunks[1]);
 
         // Map preview
-        let styled_tiles = floor.styled_grid();
-
         let mut lines = Vec::new();
-        let mut current_line = Vec::new();
-        let mut prev_y = 0;
-
-        for (_x, y, ch, style) in styled_tiles {
-            if y != prev_y {
-                lines.push(Line::from(current_line));
-                current_line = Vec::new();
-                prev_y = y;
+        for y in 0..floor.height {
+            let mut current_line = Vec::new();
+            for x in 0..floor.width {
+                if let Some((ch, style)) = floor.get_styled_tile(x, y, app.frame_count) {
+                    current_line.push(Span::styled(ch.to_string(), style));
+                } else {
+                    current_line.push(Span::raw(" "));
+                }
             }
-            current_line.push(Span::styled(ch.to_string(), style));
-        }
-        if !current_line.is_empty() {
             lines.push(Line::from(current_line));
         }
 

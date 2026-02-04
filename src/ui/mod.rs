@@ -67,10 +67,6 @@ pub fn draw(f: &mut Frame, app: &mut App) {
                 let camera_x = app.camera_offset.0.floor() as i32;
                 let camera_y = app.camera_offset.1.floor() as i32;
 
-                // Get attack area for highlighting
-                let attack_area = app.get_attack_area();
-                let is_attacking = app.character.is_attack_animating();
-
                 for screen_y in 0..viewport_height {
                     let world_y = camera_y + screen_y;
                     let mut current_line = Vec::new();
@@ -78,22 +74,14 @@ pub fn draw(f: &mut Frame, app: &mut App) {
                     for screen_x in 0..viewport_width {
                         let world_x = camera_x + screen_x;
 
-                        if let Some((ch, style)) = floor.get_styled_tile(world_x, world_y) {
+                        if let Some((ch, style)) = floor.get_styled_tile(world_x, world_y, app.frame_count) {
                             let glyph_str = if ch == ' ' {
                                 "·".to_string()
                             } else {
                                 ch.to_string()
                             };
 
-                            // Highlight attack area in red if attacking
-                            let final_style =
-                                if is_attacking && attack_area.contains(&(world_x, world_y)) {
-                                    Style::default().fg(Color::Red).add_modifier(Modifier::BOLD)
-                                } else {
-                                    style
-                                };
-
-                            current_line.push(Span::styled(glyph_str, final_style));
+                            current_line.push(Span::styled(glyph_str, style));
                         } else {
                             current_line.push(Span::raw(" "));
                         }
@@ -115,14 +103,6 @@ pub fn draw(f: &mut Frame, app: &mut App) {
             let screen_x = px - cx;
             let screen_y = py - cy;
 
-            if screen_x >= 0
-                && screen_x < game_area.width as i32
-                && screen_y >= 0
-                && screen_y < game_area.height as i32
-            {
-                drawing::render_character(f, game_area, (screen_x, screen_y));
-            }
-
             // Render arrows
             let arrows: Vec<(f32, f32, &str)> = app
                 .arrows
@@ -137,12 +117,39 @@ pub fn draw(f: &mut Frame, app: &mut App) {
 
             // Render items on the floor
             if let Some(floor) = &app.current_floor {
-                let items: Vec<(i32, i32, char)> = floor
+                let items: Vec<(i32, i32, char, Color)> = floor
                     .items
                     .iter()
-                    .map(|item| (item.x, item.y, item.get_glyph()))
+                    .map(|item| (item.x, item.y, item.get_glyph(), item.get_color()))
                     .collect();
                 drawing::render_items(f, game_area, &items, cx, cy);
+            }
+
+            // Render active animations
+            for anim in &app.active_animations {
+                if let Some(frame) = anim.frames.get(anim.current_frame) {
+                    for (wx, wy) in &frame.tiles {
+                        let sx = wx - cx;
+                        let sy = wy - cy;
+
+                        if sx >= 0
+                            && sx < game_area.width as i32
+                            && sy >= 0
+                            && sy < game_area.height as i32
+                        {
+                            let pos_area = Rect::new(game_area.x + sx as u16, game_area.y + sy as u16, 1, 1);
+
+                            // Check if player is here, prioritize drawing player
+                            if *wx == px && *wy == py {
+                                continue;
+                            }
+
+                            let indicator = Paragraph::new(frame.symbol.to_string())
+                                .style(Style::default().fg(frame.color).add_modifier(Modifier::BOLD));
+                            f.render_widget(indicator, pos_area);
+                        }
+                    }
+                }
             }
 
             // Render enemies
@@ -152,12 +159,16 @@ pub fn draw(f: &mut Frame, app: &mut App) {
                     .iter()
                     .filter(|e| e.is_alive())
                     .map(|enemy| {
-                        let color = match enemy.rarity {
-                            crate::model::enemy_type::EnemyRarity::Fighter => Color::Gray,
-                            crate::model::enemy_type::EnemyRarity::Guard => Color::Green,
-                            crate::model::enemy_type::EnemyRarity::Champion => Color::Cyan,
-                            crate::model::enemy_type::EnemyRarity::Elite => Color::Magenta,
-                            crate::model::enemy_type::EnemyRarity::Boss => Color::Red,
+                        let color = if enemy.damaged_timer > 0.0 {
+                            Color::Red
+                        } else {
+                            match enemy.rarity {
+                                crate::model::enemy_type::EnemyRarity::Fighter => Color::Gray,
+                                crate::model::enemy_type::EnemyRarity::Guard => Color::Green,
+                                crate::model::enemy_type::EnemyRarity::Champion => Color::Cyan,
+                                crate::model::enemy_type::EnemyRarity::Elite => Color::Magenta,
+                                crate::model::enemy_type::EnemyRarity::Boss => Color::Red,
+                            }
                         };
                         (enemy.position.x, enemy.position.y, 'E', color)
                     })
@@ -165,33 +176,30 @@ pub fn draw(f: &mut Frame, app: &mut App) {
                 drawing::render_enemies(f, game_area, &enemies, cx, cy);
             }
 
-            // Render ultimate ability area (only while animating)
-            if app.character.ultimate.is_animating() {
-                let ultimate_positions: Vec<(i32, i32)> = app
-                    .character
-                    .ultimate
-                    .get_affected_area(px, py)
-                    .into_iter()
-                    .filter(|(x, y)| {
-                        if let Some(floor) = &app.current_floor {
-                            floor.is_walkable(*x, *y)
-                        } else {
-                            false
-                        }
-                    })
-                    .collect();
-                drawing::render_ultimate_area(f, game_area, ultimate_positions, cx, cy);
+            // Render player (prioritized)
+            if screen_x >= 0
+                && screen_x < game_area.width as i32
+                && screen_y >= 0
+                && screen_y < game_area.height as i32
+            {
+                let player_color = if app.character.damaged_timer > 0.0 {
+                    Color::Red
+                } else {
+                    Color::Yellow
+                };
+                drawing::render_character(f, game_area, (screen_x, screen_y), player_color);
             }
-            // Render cooldown bars in right panel
-            let bar_height = (right_panel_area.height as usize).saturating_sub(5) / 3;
+
+            // Render panel on the right
             let panel_chunks = Layout::default()
                 .direction(Direction::Vertical)
                 .constraints([
-                    Constraint::Length(1),                 // Weapon info
-                    Constraint::Length(1),                 // Health info
-                    Constraint::Length(1),                 // Gold info
-                    Constraint::Length(bar_height as u16), // Cooldown bars
-                    Constraint::Min(0),                    // Inventory below
+                    Constraint::Length(1),  // Weapon info
+                    Constraint::Length(1),  // Health info
+                    Constraint::Length(1),  // Gold info
+                    Constraint::Length(6),  // Cooldown bars
+                    Constraint::Length(11), // Weapon Inventory
+                    Constraint::Min(0),     // Consumable Inventory
                 ])
                 .split(right_panel_area);
 
@@ -222,54 +230,47 @@ pub fn draw(f: &mut Frame, app: &mut App) {
                 ])
                 .split(panel_chunks[3]);
 
-            // Dash cooldown (vertical)
-            let remaining_dash_cooldown = app.character.dash_cooldown_remaining();
+            // Cooldown bars
             drawing::render_vertical_cooldown_bar(
                 f,
                 bar_chunks[0],
                 "DASH",
-                remaining_dash_cooldown,
+                app.character.dash_cooldown_remaining(),
                 app.character.dash_cooldown_duration,
                 Color::Magenta,
             );
-
-            // Attack cooldown (vertical)
-            let remaining_attack_cooldown = app.character.attack_cooldown_remaining();
             drawing::render_vertical_cooldown_bar(
                 f,
                 bar_chunks[1],
                 "ATK",
-                remaining_attack_cooldown,
+                app.character.attack_cooldown_remaining(),
                 app.character.attack_cooldown_duration,
                 Color::Red,
             );
-
-            // Bow cooldown (vertical)
-            let remaining_bow_cooldown = app.character.bow_cooldown_remaining();
             drawing::render_vertical_cooldown_bar(
                 f,
                 bar_chunks[2],
                 "BOW",
-                remaining_bow_cooldown,
+                app.character.bow_cooldown_remaining(),
                 app.character.bow_cooldown_duration,
                 Color::Cyan,
             );
-
-            // Block cooldown (vertical)
-            let remaining_block_cooldown = app.character.block_cooldown_remaining();
             drawing::render_vertical_cooldown_bar(
                 f,
                 bar_chunks[3],
                 "BLOCK",
-                remaining_block_cooldown,
+                app.character.block_cooldown_remaining(),
                 app.character.block_cooldown_duration,
                 Color::Blue,
             );
 
-            // Inventory display below cooldowns
+            // Weapon Inventory
+            drawing::render_weapon_inventory(f, panel_chunks[4], &app.character.weapon_inventory);
+
+            // Consumable Inventory
             drawing::render_consumables_info(
                 f,
-                panel_chunks[4],
+                panel_chunks[5],
                 &app.character.consumable_inventory,
                 app.inventory_focused,
                 app.inventory_scroll_index,

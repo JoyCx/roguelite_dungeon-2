@@ -71,9 +71,9 @@ pub fn render_key_hints(f: &mut Frame, area: Rect, hints: Vec<(&str, &str, Optio
     f.render_widget(hint_bar, chunks[1]);
 }
 
-pub fn render_character(f: &mut Frame, area: Rect, position: (i32, i32)) {
+pub fn render_character(f: &mut Frame, area: Rect, position: (i32, i32), color: Color) {
     let character_art = "@";
-    let style = Style::default().fg(Color::Yellow);
+    let style = Style::default().fg(color);
 
     let paragraph = Paragraph::new(character_art).style(style);
 
@@ -144,68 +144,6 @@ pub fn render_dash_cooldown_bar(
 
     f.render_widget(cooldown_widget, bar_height);
 }
-#[allow(dead_code)]
-pub fn render_attack_cooldown_bar(
-    f: &mut Frame,
-    area: Rect,
-    remaining_cooldown: f32,
-    max_cooldown: f32,
-) {
-    let chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([Constraint::Min(0), Constraint::Length(2)])
-        .split(area);
-
-    let bar_height = chunks[1];
-
-    let charge_percent = 1.0 - (remaining_cooldown / max_cooldown).clamp(0.0, 1.0);
-
-    let bar_width = (bar_height.width as usize).saturating_sub(4);
-    let filled_width = ((bar_width as f32) * charge_percent) as usize;
-    let empty_width = bar_width.saturating_sub(filled_width);
-
-    let mut bar_line = String::new();
-    bar_line.push_str("[ ");
-
-    let fill_char = '█';
-    let fill_color = if remaining_cooldown < 0.01 {
-        Color::Red
-    } else {
-        Color::Yellow
-    };
-
-    for _ in 0..filled_width {
-        bar_line.push(fill_char);
-    }
-
-    let empty_char = '░';
-    for _ in 0..empty_width {
-        bar_line.push(empty_char);
-    }
-
-    bar_line.push_str(" ]");
-
-    let status_text = if remaining_cooldown < 0.01 {
-        "ATTACK READY".to_string()
-    } else {
-        format!("{:.2}s", remaining_cooldown)
-    };
-
-    let mut spans = vec![Span::styled(bar_line, Style::default().fg(fill_color))];
-    spans.push(Span::raw(" "));
-    spans.push(Span::styled(
-        status_text,
-        Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
-    ));
-
-    let cooldown_line = Line::from(spans);
-    let cooldown_widget = Paragraph::new(cooldown_line)
-        .alignment(Alignment::Center)
-        .style(Style::default().bg(Color::Indexed(234)));
-
-    f.render_widget(cooldown_widget, bar_height);
-}
-
 #[allow(dead_code)]
 pub fn render_attack_area(
     f: &mut Frame,
@@ -321,6 +259,40 @@ pub fn render_weapon_info(f: &mut Frame, area: Rect, weapon_name: &str) {
         .style(Style::default().fg(Color::Cyan));
 
     f.render_widget(weapon_widget, area);
+}
+
+pub fn render_weapon_inventory(
+    f: &mut Frame,
+    area: Rect,
+    weapon_inventory: &crate::model::weapon::WeaponInventory,
+) {
+    let mut lines = Vec::new();
+    lines.push(Line::from(Span::styled(" WEAPONS (1-9) ", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))));
+
+    for i in 0..9 {
+        let slot_num = i + 1;
+        let mut style = Style::default().fg(Color::Gray);
+        let prefix = if i == weapon_inventory.current_weapon_index {
+            style = style.fg(Color::Yellow).add_modifier(Modifier::BOLD);
+            "→"
+        } else {
+            " "
+        };
+
+        let weapon_name = if let Some(weapon) = weapon_inventory.weapons.get(i) {
+            weapon.name.clone()
+        } else {
+            "---".to_string()
+        };
+
+        lines.push(Line::from(vec![
+            Span::styled(format!("{} {}: ", prefix, slot_num), style),
+            Span::styled(weapon_name, style),
+        ]));
+    }
+
+    let widget = Paragraph::new(lines).block(Block::default().borders(Borders::ALL).border_style(Style::default().fg(Color::Cyan)));
+    f.render_widget(widget, area);
 }
 
 pub fn render_health_info(f: &mut Frame, area: Rect, health: i32, health_max: i32) {
@@ -510,11 +482,11 @@ pub fn render_horizontal_ultimate_bar(f: &mut Frame, area: Rect, charge: f32) {
 pub fn render_items(
     f: &mut Frame,
     game_area: Rect,
-    items: &[(i32, i32, char)],
+    items: &[(i32, i32, char, Color)],
     camera_x: i32,
     camera_y: i32,
 ) {
-    for (world_x, world_y, glyph) in items {
+    for (world_x, world_y, glyph, color) in items {
         let screen_x = world_x - camera_x;
         let screen_y = world_y - camera_y;
 
@@ -523,17 +495,8 @@ pub fn render_items(
             && screen_y >= 0
             && screen_y < game_area.height as i32
         {
-            let color = match glyph {
-                '◓' => Color::LightRed,     // Healing
-                '⊞' => Color::LightGreen,   // Bandage
-                '✕' => Color::Cyan,         // Antitoxin
-                '◆' => Color::LightYellow,  // Fire Oil
-                '☆' => Color::LightMagenta, // Blessed Bread
-                _ => Color::White,
-            };
-
             let widget = Paragraph::new(glyph.to_string())
-                .style(Style::default().fg(color).add_modifier(Modifier::BOLD));
+                .style(Style::default().fg(*color).add_modifier(Modifier::BOLD));
 
             let area = Rect {
                 x: game_area.x + screen_x as u16,

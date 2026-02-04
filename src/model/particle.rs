@@ -54,29 +54,6 @@ impl ParticleSystem {
         self.particles.retain(|p| p.is_alive());
     }
 
-    pub fn emit_impact(&mut self, x: f32, y: f32, radius: i32, color: ratatui::prelude::Color) {
-        // Create a burst of particles in a circle
-        for angle_steps in 0..8 {
-            let angle = (angle_steps as f32 / 8.0) * std::f32::consts::TAU;
-            let dx = angle.cos() * radius as f32;
-            let dy = angle.sin() * radius as f32;
-
-            let glyph = match angle_steps {
-                0 => '→',
-                1 => '↘',
-                2 => '↓',
-                3 => '↙',
-                4 => '←',
-                5 => '↖',
-                6 => '↑',
-                7 => '↗',
-                _ => '*',
-            };
-
-            let particle = Particle::new(x + dx, y + dy, glyph, color, 0.3);
-            self.particles.push(particle);
-        }
-    }
 
     pub fn emit_crit(&mut self, x: f32, y: f32) {
         // Create upward-flying crit indicators

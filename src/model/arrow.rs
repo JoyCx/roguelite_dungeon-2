@@ -83,7 +83,6 @@ impl Arrow {
         self.y += (self.dy as f32) * movement;
     }
 
-    #[allow(dead_code)]
     pub fn get_position(&self) -> (i32, i32) {
         (self.x.round() as i32, self.y.round() as i32)
     }

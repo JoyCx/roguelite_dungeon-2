@@ -44,19 +44,6 @@ impl Floor {
         floor
     }
 
-    #[allow(dead_code)]
-    pub fn as_string(&self) -> String {
-        let mut result = String::new();
-        for y in 0..self.height {
-            for x in 0..self.width {
-                let is_wall = self.get_tile(x, y);
-                result.push(if is_wall { '#' } else { '.' });
-            }
-            result.push('\n');
-        }
-        result
-    }
-
     fn generate(&mut self) {
         let mut rng = StdRng::seed_from_u64(self.seed);
 
@@ -344,64 +331,58 @@ impl Floor {
 
     pub fn styled_grid(&self) -> Vec<(i32, i32, char, Style)> {
         let mut result = Vec::new();
-
-        self.tiles.iter().enumerate().for_each(|(i, &is_wall)| {
-            let x = (i as i32) % self.width;
-            let y = (i as i32) / self.width;
-
-            let ch = if is_wall { '█' } else { '.' };
-
-            let style = if is_wall {
-                let nearby_floors = self.count_nearby_floors(x, y, 2);
-                match nearby_floors {
-                    0..=1 => Style::new().fg(Color::Indexed(236)),
-                    2..=3 => Style::new().fg(Color::Indexed(238)),
-                    4..=5 => Style::new().fg(Color::Indexed(240)),
-                    _ => Style::new().fg(Color::Indexed(242)),
+        for y in 0..self.height {
+            for x in 0..self.width {
+                if let Some((ch, style)) = self.get_styled_tile(x, y, 0) {
+                    result.push((x, y, ch, style));
                 }
-            } else {
-                let wall_proximity = self.count_walls_near(x, y, 1);
-                match wall_proximity {
-                    0..=2 => Style::new().fg(Color::Indexed(246)),
-                    3..=4 => Style::new().fg(Color::Indexed(244)),
-                    5..=6 => Style::new().fg(Color::Indexed(242)),
-                    7..=8 => Style::new().fg(Color::Indexed(240)),
-                    _ => Style::new().fg(Color::Indexed(238)),
-                }
-            };
-
-            result.push((x, y, ch, style));
-        });
-
+            }
+        }
         result
     }
 
-    pub fn get_styled_tile(&self, x: i32, y: i32) -> Option<(char, Style)> {
+    pub fn get_styled_tile(&self, x: i32, y: i32, frame_count: u64) -> Option<(char, Style)> {
         if x < 0 || x >= self.width || y < 0 || y >= self.height {
             return None;
         }
 
         let is_wall = self.get_tile(x, y);
-        let ch = if is_wall { '█' } else { '.' };
 
-        let style = if is_wall {
+        // Pseudo-random character choice based on position to ensure consistency
+        let pos_hash = (x.wrapping_mul(31) ^ y.wrapping_mul(17)) as u32;
+
+        let (ch, mut style) = if is_wall {
+            let wall_chars = ['█', '▓', '▒', '░'];
+            let ch = wall_chars[(pos_hash % wall_chars.len() as u32) as usize];
+
             let nearby_floors = self.count_nearby_floors(x, y, 2);
-            match nearby_floors {
+            let style = match nearby_floors {
                 0..=1 => Style::new().fg(Color::Indexed(236)),
                 2..=3 => Style::new().fg(Color::Indexed(238)),
                 4..=5 => Style::new().fg(Color::Indexed(240)),
                 _ => Style::new().fg(Color::Indexed(242)),
-            }
+            };
+            (ch, style)
         } else {
+            let floor_chars = ['·', ' ', '°', '·'];
+            let ch = floor_chars[(pos_hash % floor_chars.len() as u32) as usize];
+
             let wall_proximity = self.count_walls_near(x, y, 1);
-            match wall_proximity {
+            let style = match wall_proximity {
                 0..=2 => Style::new().fg(Color::Indexed(246)),
                 3..=4 => Style::new().fg(Color::Indexed(244)),
                 5..=6 => Style::new().fg(Color::Indexed(242)),
                 7..=8 => Style::new().fg(Color::Indexed(240)),
                 _ => Style::new().fg(Color::Indexed(238)),
-            }
+            };
+            (ch, style)
         };
+
+        // Add "glint" effect - occasional shimmering
+        let glint_chance = (pos_hash % 1000) as u64;
+        if glint_chance < 5 && (frame_count + glint_chance) % 60 < 10 {
+            style = style.fg(Color::White).add_modifier(ratatui::style::Modifier::BOLD);
+        }
 
         Some((ch, style))
     }
@@ -481,6 +462,19 @@ impl Floor {
         } else {
             None
         }
+    }
+
+    pub fn pickup_all_at(&mut self, x: i32, y: i32) -> Vec<ItemDrop> {
+        let mut picked_up = Vec::new();
+        let mut i = 0;
+        while i < self.items.len() {
+            if self.items[i].x == x && self.items[i].y == y {
+                picked_up.push(self.items.remove(i));
+            } else {
+                i += 1;
+            }
+        }
+        picked_up
     }
 
     /// Find a random spawn position for the player
@@ -614,11 +608,23 @@ impl Floor {
                     // Determine tier based on difficulty drop chances
                     let tier = self.determine_tier(&mut rng, difficulty, &all_tiers);
 
-                    let idx = rng.random_range(0..consumable_types.len());
-                    let consumable_type = consumable_types[idx].clone();
-                    let consumable = Consumable::new(consumable_type);
-                    let item = ItemDrop::consumable_with_tier(consumable, x, y, tier);
-                    self.add_item(item);
+                    // 20% chance to spawn a weapon instead of a consumable
+                    if rng.random_range(0..100) < 20 {
+                        use crate::model::weapon::Weapon;
+                        let weapon = match rng.random_range(0..3) {
+                            0 => Weapon::new_sword(),
+                            1 => Weapon::new_bow(),
+                            _ => Weapon::new_mace(),
+                        };
+                        let item = ItemDrop::weapon(weapon, x, y, tier);
+                        self.add_item(item);
+                    } else {
+                        let idx = rng.random_range(0..consumable_types.len());
+                        let consumable_type = consumable_types[idx].clone();
+                        let consumable = Consumable::new(consumable_type);
+                        let item = ItemDrop::consumable_with_tier(consumable, x, y, tier);
+                        self.add_item(item);
+                    }
                     spawned += 1;
                     break;
                 }
@@ -671,6 +677,9 @@ impl Floor {
                     enemy.max_health = template.health;
                     enemy.rarity = template.rarity.clone();
                     enemy.base_gold = template.rarity.calculate_gold_drop(difficulty);
+                    if let Some(attack) = template.attacks.first() {
+                        enemy.attack_pattern = attack.pattern.clone();
+                    }
 
                     self.enemies.push(enemy);
                     spawned += 1;
