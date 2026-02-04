@@ -33,8 +33,6 @@ pub struct Enemy {
     pub max_health: i32,             // maximum health points
     pub rarity: crate::model::enemy_type::EnemyRarity, // enemy difficulty tier
     pub base_gold: u32,              // gold dropped on defeat
-    pub damaged_timer: f32,          // damage animation timer
-    pub attack_pattern: crate::model::attack_pattern::AttackPattern,
 }
 
 impl Enemy {
@@ -55,36 +53,12 @@ impl Enemy {
             max_health: 10,
             rarity: crate::model::enemy_type::EnemyRarity::Fighter,
             base_gold: 10,
-            damaged_timer: 0.0,
-            attack_pattern: crate::model::attack_pattern::AttackPattern::BasicSlash,
         }
-    }
-
-    pub fn get_detection_radius(&self, difficulty: &crate::model::item_tier::Difficulty) -> i32 {
-        let base_radius = 5.0;
-
-        let difficulty_mult = match difficulty {
-            crate::model::item_tier::Difficulty::Easy => 0.8,
-            crate::model::item_tier::Difficulty::Normal => 1.0,
-            crate::model::item_tier::Difficulty::Hard => 1.5,
-            crate::model::item_tier::Difficulty::Death => 2.0,
-        };
-
-        let rarity_mult = match self.rarity {
-            crate::model::enemy_type::EnemyRarity::Fighter => 1.0,
-            crate::model::enemy_type::EnemyRarity::Guard => 1.1,
-            crate::model::enemy_type::EnemyRarity::Champion => 1.3,
-            crate::model::enemy_type::EnemyRarity::Elite => 1.5,
-            crate::model::enemy_type::EnemyRarity::Boss => 2.0,
-        };
-
-        (base_radius * difficulty_mult * rarity_mult) as i32
     }
 
     /// Take damage and return whether enemy is still alive
     pub fn take_damage(&mut self, damage: i32) -> bool {
         self.health = (self.health - damage).max(0);
-        self.damaged_timer = 1.0; // Blink red for 1 second
         self.health > 0
     }
 

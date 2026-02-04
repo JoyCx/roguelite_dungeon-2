@@ -68,4 +68,9 @@ impl GameSave {
         })
     }
 
+    #[allow(dead_code)]
+    pub fn save_exists(slot: u32) -> bool {
+        let path = format!("saves/save_{}.json", slot);
+        Path::new(&path).exists()
+    }
 }

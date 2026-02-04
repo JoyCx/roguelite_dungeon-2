@@ -1,13 +1,11 @@
 use crate::model::consumable::Consumable;
 use crate::model::item_tier::ItemTier;
-use crate::model::weapon::Weapon;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum ItemDropType {
     Consumable(Consumable),
     Gold(u32),
-    Weapon(Weapon),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -54,55 +52,19 @@ impl ItemDrop {
         }
     }
 
-    pub fn weapon(weapon: Weapon, x: i32, y: i32, tier: ItemTier) -> Self {
-        Self {
-            item_type: ItemDropType::Weapon(weapon),
-            x,
-            y,
-            time_on_ground: 0.0,
-            tier,
-            stackable: false,
-        }
-    }
-
     pub fn get_glyph(&self) -> char {
         match &self.item_type {
             ItemDropType::Consumable(c) => {
                 use crate::model::consumable::ConsumableType;
                 match c.consumable_type {
-                    ConsumableType::WeakHealingDraught => '❣',
-                    ConsumableType::BandageRoll => '〓',
-                    ConsumableType::AntitoxinVial => '☣',
-                    ConsumableType::FireOilFlask => '⚱',
-                    ConsumableType::BlessedBread => '☼',
+                    ConsumableType::WeakHealingDraught => '◓',
+                    ConsumableType::BandageRoll => '⊞',
+                    ConsumableType::AntitoxinVial => '✕',
+                    ConsumableType::FireOilFlask => '◆',
+                    ConsumableType::BlessedBread => '☆',
                 }
             }
-            ItemDropType::Gold(_) => '❂',
-            ItemDropType::Weapon(w) => {
-                match w.weapon_type {
-                    crate::model::weapon::WeaponType::Sword => '†',
-                    crate::model::weapon::WeaponType::Bow => '🏹',
-                    crate::model::weapon::WeaponType::Mace => '⚒',
-                }
-            }
-        }
-    }
-
-    pub fn get_color(&self) -> ratatui::style::Color {
-        use ratatui::style::Color;
-        match &self.item_type {
-            ItemDropType::Consumable(c) => {
-                use crate::model::consumable::ConsumableType;
-                match c.consumable_type {
-                    ConsumableType::WeakHealingDraught => Color::LightRed,
-                    ConsumableType::BandageRoll => Color::LightGreen,
-                    ConsumableType::AntitoxinVial => Color::Cyan,
-                    ConsumableType::FireOilFlask => Color::LightYellow,
-                    ConsumableType::BlessedBread => Color::LightMagenta,
-                }
-            }
-            ItemDropType::Gold(_) => Color::Yellow,
-            ItemDropType::Weapon(_) => Color::White,
+            ItemDropType::Gold(_) => '¤',
         }
     }
 
@@ -110,7 +72,6 @@ impl ItemDrop {
         match &self.item_type {
             ItemDropType::Consumable(c) => c.name.clone(),
             ItemDropType::Gold(amount) => format!("{} gold", amount),
-            ItemDropType::Weapon(w) => w.name.clone(),
         }
     }
 

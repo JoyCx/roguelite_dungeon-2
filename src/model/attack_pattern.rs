@@ -11,9 +11,8 @@ pub struct AnimationFrame {
 
 /// Unified attack pattern system for both player and enemies
 /// 12+ unique patterns covering melee, ranged, and magical attacks
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub enum AttackPattern {
-    #[default]
     // === CLOSE COMBAT PATTERNS ===
     /// Classic melee slash - 3x3 centered around attacker
     BasicSlash,

@@ -1,4 +1,3 @@
-use crate::model::attack_pattern::AttackPattern;
 use crate::model::reach_shape::ReachShape;
 use serde::{Deserialize, Serialize};
 
@@ -30,8 +29,6 @@ pub struct Weapon {
     pub enchants: Vec<Enchant>,
     #[serde(skip)]
     pub reach_shape: ReachShape,
-    #[serde(skip)]
-    pub attack_pattern: AttackPattern,
 }
 
 impl Weapon {
@@ -43,7 +40,6 @@ impl Weapon {
             name: "Sword".to_string(),
             enchants: Vec::new(),
             reach_shape: ReachShape::Arc,
-            attack_pattern: AttackPattern::BasicSlash,
         }
     }
 
@@ -55,7 +51,6 @@ impl Weapon {
             name: "Bow".to_string(),
             enchants: Vec::new(),
             reach_shape: ReachShape::Line(1),
-            attack_pattern: AttackPattern::ArrowShot(8),
         }
     }
 
@@ -67,7 +62,6 @@ impl Weapon {
             name: "Mace".to_string(),
             enchants: Vec::new(),
             reach_shape: ReachShape::Area,
-            attack_pattern: AttackPattern::WhirlwindAttack,
         }
     }
 

@@ -6,6 +6,9 @@ use std::time::Instant;
 
 #[derive(Clone, Debug)]
 pub struct Character {
+    #[allow(dead_code)]
+    pub speed: f32,
+
     pub name: String,
 
     pub last_direction: (i32, i32),
@@ -55,14 +58,12 @@ pub struct Character {
 
     // Gold/Currency wallet
     pub gold: u32,
-
-    // Damage animation timer
-    pub damaged_timer: f32,
 }
 
 impl Default for Character {
     fn default() -> Self {
         Self {
+            speed: 5.0,
             name: "Unnamed Hero".to_string(),
             last_direction: (0, 0),
             dash_cooldown_start: None,
@@ -87,12 +88,19 @@ impl Default for Character {
             ultimate: Ultimate::default(),
             ultimate_charge: 0.0,
             gold: 0,
-            damaged_timer: 0.0,
         }
     }
 }
 
 impl Character {
+    #[allow(dead_code)]
+    pub fn new(speed: f32) -> Self {
+        Self {
+            speed,
+            ..Default::default()
+        }
+    }
+
     pub fn can_dash(&self) -> bool {
         match self.dash_cooldown_start {
             None => true,
@@ -199,7 +207,6 @@ impl Character {
 
     pub fn take_damage(&mut self, amount: i32) {
         self.health = (self.health - amount).max(0);
-        self.damaged_timer = 1.0; // Blink red for 1 second
     }
 
     pub fn is_alive(&self) -> bool {
