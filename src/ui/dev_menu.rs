@@ -29,7 +29,7 @@ pub fn draw(f: &mut Frame, app: &mut App, area: Rect) {
     };
 
     let input_text = if app.dev_seed_input.is_empty() {
-        "[Commands: R=Random | ENTER=Generate | E=Spawn Enemy | D=Damage Test | G=Add Gold | P=Play | ESC=Back]"
+        "[Commands: R=Random | ENTER=Generate | E=Spawn Enemy | D=Damage Test | G=Add Gold | A=Cycle Attack Pattern | P=Play | ESC=Back]"
             .to_string()
     } else {
         format!("Seed Input: {}", app.dev_seed_input)
@@ -234,6 +234,10 @@ pub fn handle_input(app: &mut App, key: crossterm::event::KeyCode) {
         KeyCode::Char('g') | KeyCode::Char('G') => {
             // Add gold for testing
             app.character.gold += 50;
+        }
+        KeyCode::Char('a') | KeyCode::Char('A') => {
+            // Cycle attack pattern for testing
+            app.cycle_dev_attack_pattern();
         }
         KeyCode::Backspace => {
             // Edit seed

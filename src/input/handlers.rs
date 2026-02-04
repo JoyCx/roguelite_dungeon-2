@@ -147,15 +147,21 @@ pub fn handle_game_input(app: &mut App, key: crossterm::event::KeyEvent) {
             }
         }
         KeyCode::Char(c) if c.is_ascii_digit() && c != '0' => {
+            let slot = c.to_digit(10).unwrap() as usize;
             // Check if shift is pressed for consumable usage
             if key
                 .modifiers
                 .contains(crossterm::event::KeyModifiers::SHIFT)
             {
-                let slot = c.to_digit(10).unwrap() as usize;
                 app.use_consumable(slot - 1); // Convert 1-9 to 0-8
+            } else if key
+                .modifiers
+                .contains(crossterm::event::KeyModifiers::CONTROL)
+            {
+                // Ctrl + number drops the weapon in that slot
+                app.drop_weapon(slot);
             } else {
-                let slot = c.to_digit(10).unwrap() as usize;
+                // Just number switches to that weapon
                 app.switch_weapon(slot);
             }
         }
@@ -209,6 +215,8 @@ pub fn handle_game_input(app: &mut App, key: crossterm::event::KeyEvent) {
                 app.inventory_focused = true;
             } else if key.code == KeyCode::Char('f') || key.code == KeyCode::Char('F') {
                 app.block();
+            } else if key.code == KeyCode::Char('h') || key.code == KeyCode::Char('H') {
+                app.cycle_dev_attack_pattern();
             }
         }
     }

@@ -13,5 +13,6 @@
   "item_describe": "Return",
   "pause": "P",
   "difficulty": "Normal",
-  "default_difficulty": "Normal"
+  "default_difficulty": "Normal",
+  "player_speed": 1.0
 }

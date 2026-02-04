@@ -51,6 +51,16 @@ impl GameDifficulty {
     pub fn get_tier_drop_chance(&self, rarity: &crate::model::item_rarity::ItemRarity) -> f32 {
         self.get_rarity_drop_chance(rarity)
     }
+
+    /// Returns multiplier for enemy detection radius (higher difficulty = bigger radius)
+    pub fn detection_radius_multiplier(&self) -> f32 {
+        match self {
+            GameDifficulty::Easy => 0.7,      // 70% of normal
+            GameDifficulty::Normal => 1.0,    // Baseline
+            GameDifficulty::Hard => 1.4,      // 140% of normal
+            GameDifficulty::Death => 1.8,     // 180% of normal
+        }
+    }
 }
 
 #[cfg(test)]

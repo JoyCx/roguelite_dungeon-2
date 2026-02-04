@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 pub enum ItemDropType {
     Consumable(Consumable),
     Gold(u32),
+    Weapon(crate::model::weapon::Weapon),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -52,6 +53,17 @@ impl ItemDrop {
         }
     }
 
+    pub fn weapon(weapon: crate::model::weapon::Weapon, x: i32, y: i32) -> Self {
+        Self {
+            item_type: ItemDropType::Weapon(weapon),
+            x,
+            y,
+            time_on_ground: 0.0,
+            tier: ItemTier::Common,
+            stackable: false, // Weapons don't stack
+        }
+    }
+
     pub fn get_glyph(&self) -> char {
         match &self.item_type {
             ItemDropType::Consumable(c) => {
@@ -65,6 +77,38 @@ impl ItemDrop {
                 }
             }
             ItemDropType::Gold(_) => '¤',
+            ItemDropType::Weapon(w) => {
+                use crate::model::weapon::WeaponType;
+                match w.weapon_type {
+                    WeaponType::Sword => match self.tier {
+                        ItemTier::Common => 's',
+                        ItemTier::Rare => '⚔',
+                        ItemTier::Epic => '⚡',
+                        ItemTier::Exotic => '✦',
+                        ItemTier::Legendary => '✦',
+                        ItemTier::Mythic => '§',
+                        ItemTier::Godly => '◈',
+                    },
+                    WeaponType::Bow => match self.tier {
+                        ItemTier::Common => 'b',
+                        ItemTier::Rare => '🏹',
+                        ItemTier::Epic => '⇄',
+                        ItemTier::Exotic => '⊳',
+                        ItemTier::Legendary => '⊳',
+                        ItemTier::Mythic => '◬',
+                        ItemTier::Godly => '◉',
+                    },
+                    WeaponType::Mace => match self.tier {
+                        ItemTier::Common => 'm',
+                        ItemTier::Rare => '⚒',
+                        ItemTier::Epic => '⚙',
+                        ItemTier::Exotic => '⊛',
+                        ItemTier::Legendary => '⊛',
+                        ItemTier::Mythic => '◉',
+                        ItemTier::Godly => '⊙',
+                    },
+                }
+            }
         }
     }
 
@@ -72,6 +116,20 @@ impl ItemDrop {
         match &self.item_type {
             ItemDropType::Consumable(c) => c.name.clone(),
             ItemDropType::Gold(amount) => format!("{} gold", amount),
+            ItemDropType::Weapon(w) => format!("{} ({})", w.name, w.damage),
+        }
+    }
+
+    pub fn get_glyph_color(&self) -> ratatui::prelude::Color {
+        use ratatui::prelude::Color;
+        match self.tier {
+            ItemTier::Common => Color::Gray,
+            ItemTier::Rare => Color::Blue,
+            ItemTier::Epic => Color::Magenta,
+            ItemTier::Exotic => Color::Yellow,
+            ItemTier::Legendary => Color::LightYellow,
+            ItemTier::Mythic => Color::Cyan,
+            ItemTier::Godly => Color::Red,
         }
     }
 

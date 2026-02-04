@@ -382,28 +382,40 @@ impl Floor {
         }
 
         let is_wall = self.get_tile(x, y);
-        let ch = if is_wall { '█' } else { '.' };
 
-        let style = if is_wall {
+        if is_wall {
+            // Multiple wall characters for visual variety
+            let wall_chars = ['█', '▓', '▒', '▀', '▄', '■', '◆', '◊'];
             let nearby_floors = self.count_nearby_floors(x, y, 2);
-            match nearby_floors {
-                0..=1 => Style::new().fg(Color::Indexed(236)),
-                2..=3 => Style::new().fg(Color::Indexed(238)),
-                4..=5 => Style::new().fg(Color::Indexed(240)),
-                _ => Style::new().fg(Color::Indexed(242)),
-            }
+
+            // Choose wall character based on position (seeded from coordinates for consistency)
+            let char_idx =
+                ((x as usize).wrapping_mul(73) ^ (y as usize).wrapping_mul(97)) % wall_chars.len();
+            let ch = wall_chars[char_idx];
+
+            let color = match nearby_floors {
+                0..=1 => Color::Indexed(236),
+                2..=3 => Color::Indexed(238),
+                4..=5 => Color::Indexed(240),
+                _ => Color::Indexed(242),
+            };
+
+            let style = Style::new().fg(color);
+            Some((ch, style))
         } else {
             let wall_proximity = self.count_walls_near(x, y, 1);
-            match wall_proximity {
-                0..=2 => Style::new().fg(Color::Indexed(246)),
-                3..=4 => Style::new().fg(Color::Indexed(244)),
-                5..=6 => Style::new().fg(Color::Indexed(242)),
-                7..=8 => Style::new().fg(Color::Indexed(240)),
-                _ => Style::new().fg(Color::Indexed(238)),
-            }
-        };
+            let ch = '.';
+            let color = match wall_proximity {
+                0..=2 => Color::Indexed(246),
+                3..=4 => Color::Indexed(244),
+                5..=6 => Color::Indexed(242),
+                7..=8 => Color::Indexed(240),
+                _ => Color::Indexed(238),
+            };
 
-        Some((ch, style))
+            let style = Style::new().fg(color);
+            Some((ch, style))
+        }
     }
 
     #[allow(dead_code)]
@@ -481,6 +493,37 @@ impl Floor {
         } else {
             None
         }
+    }
+
+    /// Try to drop an item at an adjacent empty position next to (x, y)
+    /// Returns true if item was dropped, false if no empty space found
+    pub fn try_drop_item_adjacent(&mut self, item: ItemDrop, player_x: i32, player_y: i32) -> bool {
+        // Try adjacent tiles in order
+        let adjacent = vec![
+            (player_x + 1, player_y),
+            (player_x - 1, player_y),
+            (player_x, player_y + 1),
+            (player_x, player_y - 1),
+        ];
+
+        for (x, y) in adjacent {
+            // Check if position is walkable and empty
+            if x >= 0
+                && x < self.width as i32
+                && y >= 0
+                && y < self.height as i32
+                && self.is_walkable(x, y)
+                && !self.item_exists_at(x, y)
+                && !self.enemy_exists_at(x, y)
+            {
+                let mut dropped = item;
+                dropped.x = x;
+                dropped.y = y;
+                self.add_item(dropped);
+                return true;
+            }
+        }
+        false
     }
 
     /// Find a random spawn position for the player
@@ -671,6 +714,7 @@ impl Floor {
                     enemy.max_health = template.health;
                     enemy.rarity = template.rarity.clone();
                     enemy.base_gold = template.rarity.calculate_gold_drop(difficulty);
+                    enemy.detection_radius = template.rarity.calculate_detection_radius(difficulty);
 
                     self.enemies.push(enemy);
                     spawned += 1;

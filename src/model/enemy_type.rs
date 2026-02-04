@@ -59,6 +59,36 @@ impl EnemyRarity {
         };
         (base as f32 * multiplier).ceil() as u32
     }
+
+    /// Get base detection radius for this enemy tier (in tiles)
+    /// Used to determine when enemy starts chasing the player
+    pub fn base_detection_radius(&self) -> i32 {
+        match self {
+            EnemyRarity::Fighter => 5,    // Weakest enemies have smallest radius
+            EnemyRarity::Guard => 6,
+            EnemyRarity::Champion => 8,
+            EnemyRarity::Elite => 10,
+            EnemyRarity::Boss => 15,      // Bosses can detect player from far away
+        }
+    }
+
+    /// Calculate final detection radius based on difficulty
+    pub fn calculate_detection_radius(&self, difficulty: &Difficulty) -> i32 {
+        let base = self.base_detection_radius() as f32;
+        let multiplier = difficulty.detection_radius_multiplier();
+        (base * multiplier).ceil() as i32
+    }
+
+    /// Get unique ASCII art representation for this enemy type
+    pub fn get_glyph(&self) -> char {
+        match self {
+            EnemyRarity::Fighter => 'ƒ',      // Lowercase f with hook - simple fighter
+            EnemyRarity::Guard => 'Ψ',        // Psi symbol - protective stance
+            EnemyRarity::Champion => '◆',     // Diamond - stronger/more defined
+            EnemyRarity::Elite => '§',        // Section symbol - rare/prestigious
+            EnemyRarity::Boss => '❋',        // Heavy ornament - boss tier
+        }
+    }
 }
 
 /// Whether enemy is undead (physical, fire weak) or ghost (ethereal, magic weak)

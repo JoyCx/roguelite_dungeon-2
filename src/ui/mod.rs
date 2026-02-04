@@ -112,17 +112,6 @@ pub fn draw(f: &mut Frame, app: &mut App) {
                 app.camera_offset.1.floor() as i32,
             );
 
-            let screen_x = px - cx;
-            let screen_y = py - cy;
-
-            if screen_x >= 0
-                && screen_x < game_area.width as i32
-                && screen_y >= 0
-                && screen_y < game_area.height as i32
-            {
-                drawing::render_character(f, game_area, (screen_x, screen_y));
-            }
-
             // Render arrows
             let arrows: Vec<(f32, f32, &str)> = app
                 .arrows
@@ -137,10 +126,10 @@ pub fn draw(f: &mut Frame, app: &mut App) {
 
             // Render items on the floor
             if let Some(floor) = &app.current_floor {
-                let items: Vec<(i32, i32, char)> = floor
+                let items: Vec<(i32, i32, char, Color)> = floor
                     .items
                     .iter()
-                    .map(|item| (item.x, item.y, item.get_glyph()))
+                    .map(|item| (item.x, item.y, item.get_glyph(), item.get_glyph_color()))
                     .collect();
                 drawing::render_items(f, game_area, &items, cx, cy);
             }
@@ -152,14 +141,20 @@ pub fn draw(f: &mut Frame, app: &mut App) {
                     .iter()
                     .filter(|e| e.is_alive())
                     .map(|enemy| {
-                        let color = match enemy.rarity {
-                            crate::model::enemy_type::EnemyRarity::Fighter => Color::Gray,
-                            crate::model::enemy_type::EnemyRarity::Guard => Color::Green,
-                            crate::model::enemy_type::EnemyRarity::Champion => Color::Cyan,
-                            crate::model::enemy_type::EnemyRarity::Elite => Color::Magenta,
-                            crate::model::enemy_type::EnemyRarity::Boss => Color::Red,
+                        // If damaged, render in red
+                        let color = if enemy.is_damaged_animating() {
+                            Color::Red
+                        } else {
+                            match enemy.rarity {
+                                crate::model::enemy_type::EnemyRarity::Fighter => Color::Gray,
+                                crate::model::enemy_type::EnemyRarity::Guard => Color::Green,
+                                crate::model::enemy_type::EnemyRarity::Champion => Color::Cyan,
+                                crate::model::enemy_type::EnemyRarity::Elite => Color::Magenta,
+                                crate::model::enemy_type::EnemyRarity::Boss => Color::Red,
+                            }
                         };
-                        (enemy.position.x, enemy.position.y, 'E', color)
+                        let glyph = enemy.rarity.get_glyph();
+                        (enemy.position.x, enemy.position.y, glyph, color)
                     })
                     .collect();
                 drawing::render_enemies(f, game_area, &enemies, cx, cy);
@@ -181,6 +176,23 @@ pub fn draw(f: &mut Frame, app: &mut App) {
                     })
                     .collect();
                 drawing::render_ultimate_area(f, game_area, ultimate_positions, cx, cy);
+            }
+
+            // RENDER PLAYER LAST - so they always appear on top of other entities and effects
+            let screen_x = px - cx;
+            let screen_y = py - cy;
+
+            if screen_x >= 0
+                && screen_x < game_area.width as i32
+                && screen_y >= 0
+                && screen_y < game_area.height as i32
+            {
+                drawing::render_character(
+                    f,
+                    game_area,
+                    (screen_x, screen_y),
+                    app.character.is_damaged_animating(),
+                );
             }
             // Render cooldown bars in right panel
             let bar_height = (right_panel_area.height as usize).saturating_sub(5) / 3;

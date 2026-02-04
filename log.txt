@@ -1,0 +1,724 @@
+Starting position: (89, 29)
+
+=== MOVE ATTEMPT ===
+Current pos: (89, 29)
+Target pos: (89, 30)
+MOVE SUCCESSFUL
+
+=== MOVE ATTEMPT ===
+Current pos: (89, 30)
+Target pos: (89, 31)
+MOVE SUCCESSFUL
+
+=== MOVE ATTEMPT ===
+Current pos: (89, 31)
+Target pos: (89, 32)
+MOVE SUCCESSFUL
+
+=== MOVE ATTEMPT ===
+Current pos: (89, 32)
+Target pos: (89, 33)
+MOVE SUCCESSFUL
+
+=== MOVE ATTEMPT ===
+Current pos: (89, 33)
+Target pos: (89, 34)
+MOVE SUCCESSFUL
+
+=== MOVE ATTEMPT ===
+Current pos: (89, 34)
+Target pos: (89, 35)
+MOVE SUCCESSFUL
+
+=== MOVE ATTEMPT ===
+Current pos: (89, 35)
+Target pos: (89, 36)
+MOVE SUCCESSFUL
+
+=== MOVE ATTEMPT ===
+Current pos: (89, 36)
+Target pos: (89, 37)
+MOVE SUCCESSFUL
+
+=== MOVE ATTEMPT ===
+Current pos: (89, 37)
+Target pos: (89, 38)
+MOVE SUCCESSFUL
+
+=== MOVE ATTEMPT ===
+Current pos: (89, 38)
+Target pos: (89, 37)
+MOVE SUCCESSFUL
+
+=== MOVE ATTEMPT ===
+Current pos: (89, 37)
+Target pos: (88, 37)
+MOVE SUCCESSFUL
+
+=== ATTACK ===
+Position: (88, 37)
+Direction: (-1, 0)
+Damage: 5
+Range: 2 blocks, Width: 1
+
+=== ATTACK ===
+Position: (88, 37)
+Direction: (-1, 0)
+Damage: 5
+Range: 2 blocks, Width: 1
+
+=== MOVE ATTEMPT ===
+Current pos: (88, 37)
+Target pos: (88, 36)
+MOVE SUCCESSFUL
+Dev Test: Cycling to attack pattern 1 (of 14)
+
+=== ATTACK ===
+Position: (88, 36)
+Direction: (0, -1)
+Damage: 5
+Range: 2 blocks, Width: 1
+
+=== MOVE ATTEMPT ===
+Current pos: (88, 36)
+Target pos: (87, 36)
+MOVE SUCCESSFUL
+
+=== ATTACK ===
+Position: (87, 36)
+Direction: (-1, 0)
+Damage: 5
+Range: 2 blocks, Width: 1
+Dev Test: Cycling to attack pattern 2 (of 14)
+Dev Test: Cycling to attack pattern 3 (of 14)
+Dev Test: Cycling to attack pattern 4 (of 14)
+Dev Test: Cycling to attack pattern 5 (of 14)
+
+=== ATTACK ===
+Position: (87, 36)
+Direction: (-1, 0)
+Damage: 5
+Range: 2 blocks, Width: 1
+Dev Test: Cycling to attack pattern 6 (of 14)
+Dev Test: Cycling to attack pattern 7 (of 14)
+Dev Test: Cycling to attack pattern 8 (of 14)
+
+=== ATTACK ===
+Position: (87, 36)
+Direction: (-1, 0)
+Damage: 5
+Range: 2 blocks, Width: 1
+Dev Test: Cycling to attack pattern 9 (of 14)
+Dev Test: Cycling to attack pattern 10 (of 14)
+Dev Test: Cycling to attack pattern 11 (of 14)
+
+=== ATTACK ===
+Position: (87, 36)
+Direction: (-1, 0)
+Damage: 5
+Range: 2 blocks, Width: 1
+Starting position: (89, 29)
+
+=== MOVE ATTEMPT ===
+Current pos: (89, 29)
+Target pos: (89, 28)
+MOVE SUCCESSFUL
+
+=== MOVE ATTEMPT ===
+Current pos: (89, 28)
+Target pos: (89, 27)
+MOVE SUCCESSFUL
+
+=== ATTACK ===
+Position: (89, 27)
+Direction: (0, -1)
+Damage: 5
+Range: 2 blocks, Width: 1
+Dev Test: Cycling to attack pattern 1 - GroundSlam (reach: Area)
+
+=== ATTACK ===
+Position: (89, 27)
+Direction: (0, -1)
+Damage: 5
+Range: 2 blocks, Width: 1
+
+=== ATTACK ===
+Position: (89, 27)
+Direction: (0, -1)
+Damage: 5
+Range: 2 blocks, Width: 1
+Dev Test: Cycling to attack pattern 2 - WhirlwindAttack (reach: Self_)
+Dev Test: Cycling to attack pattern 3 - SwordThrust (reach: Line(3))
+
+=== ATTACK ===
+Position: (89, 27)
+Direction: (0, -1)
+Damage: 5
+Range: 2 blocks, Width: 1
+Dev Test: Cycling to attack pattern 4 - ArrowShot (reach: Line(5))
+
+=== ATTACK ===
+Position: (89, 27)
+Direction: (0, -1)
+Damage: 5
+Range: 2 blocks, Width: 1
+
+=== MOVE ATTEMPT ===
+Current pos: (89, 27)
+Target pos: (89, 26)
+MOVE SUCCESSFUL
+
+=== ATTACK ===
+Position: (89, 26)
+Direction: (0, -1)
+Damage: 5
+Range: 2 blocks, Width: 1
+
+=== ATTACK ===
+Position: (89, 26)
+Direction: (0, -1)
+Damage: 5
+Range: 2 blocks, Width: 1
+Dev Test: Cycling to attack pattern 5 - MultiShot (reach: Cone(3))
+
+=== ATTACK ===
+Position: (89, 26)
+Direction: (0, -1)
+Damage: 5
+Range: 2 blocks, Width: 1
+
+=== ATTACK ===
+Position: (89, 26)
+Direction: (0, -1)
+Damage: 5
+Range: 2 blocks, Width: 1
+
+=== MOVE ATTEMPT ===
+Current pos: (89, 26)
+Target pos: (90, 26)
+MOVE SUCCESSFUL
+
+=== ATTACK ===
+Position: (90, 26)
+Direction: (1, 0)
+Damage: 5
+Range: 2 blocks, Width: 1
+
+=== ATTACK ===
+Position: (90, 26)
+Direction: (1, 0)
+Damage: 5
+Range: 2 blocks, Width: 1
+Dev Test: Cycling to attack pattern 6 - Barrage (reach: Line(4))
+
+=== ATTACK ===
+Position: (90, 26)
+Direction: (1, 0)
+Damage: 5
+Range: 2 blocks, Width: 1
+
+=== ATTACK ===
+Position: (90, 26)
+Direction: (1, 0)
+Damage: 5
+Range: 2 blocks, Width: 1
+
+=== MOVE ATTEMPT ===
+Current pos: (90, 26)
+Target pos: (91, 26)
+MOVE SUCCESSFUL
+Dev Test: Cycling to attack pattern 7 - PiercingShot (reach: Line(6))
+
+=== ATTACK ===
+Position: (91, 26)
+Direction: (1, 0)
+Damage: 5
+Range: 2 blocks, Width: 1
+Dev Test: Cycling to attack pattern 8 - Fireball (reach: Area)
+
+=== ATTACK ===
+Position: (91, 26)
+Direction: (1, 0)
+Damage: 5
+Range: 2 blocks, Width: 1
+
+=== ATTACK ===
+Position: (91, 26)
+Direction: (1, 0)
+Damage: 5
+Range: 2 blocks, Width: 1
+Dev Test: Cycling to attack pattern 9 - ChainLightning (reach: Cross)
+
+=== ATTACK ===
+Position: (91, 26)
+Direction: (1, 0)
+Damage: 5
+Range: 2 blocks, Width: 1
+
+=== ATTACK ===
+Position: (91, 26)
+Direction: (1, 0)
+Damage: 5
+Range: 2 blocks, Width: 1
+
+=== ATTACK ===
+Position: (91, 26)
+Direction: (1, 0)
+Damage: 5
+Range: 2 blocks, Width: 1
+Dev Test: Cycling to attack pattern 10 - FrostNova (reach: Area)
+
+=== ATTACK ===
+Position: (91, 26)
+Direction: (1, 0)
+Damage: 5
+Range: 2 blocks, Width: 1
+
+=== ATTACK ===
+Position: (91, 26)
+Direction: (1, 0)
+Damage: 5
+Range: 2 blocks, Width: 1
+
+=== MOVE ATTEMPT ===
+Current pos: (91, 26)
+Target pos: (91, 25)
+MOVE SUCCESSFUL
+
+=== ATTACK ===
+Position: (91, 25)
+Direction: (0, -1)
+Damage: 5
+Range: 2 blocks, Width: 1
+Dev Test: Cycling to attack pattern 11 - MeteorShower (reach: Area)
+
+=== ATTACK ===
+Position: (91, 25)
+Direction: (0, -1)
+Damage: 5
+Range: 2 blocks, Width: 1
+
+=== MOVE ATTEMPT ===
+Current pos: (91, 25)
+Target pos: (92, 25)
+MOVE SUCCESSFUL
+
+=== MOVE ATTEMPT ===
+Current pos: (92, 25)
+Target pos: (93, 25)
+MOVE SUCCESSFUL
+Dev Test: Cycling to attack pattern 12 - CrescentSlash (reach: Arc)
+
+=== ATTACK ===
+Position: (93, 25)
+Direction: (1, 0)
+Damage: 5
+Range: 2 blocks, Width: 1
+
+=== ATTACK ===
+Position: (93, 25)
+Direction: (1, 0)
+Damage: 5
+Range: 2 blocks, Width: 1
+Dev Test: Cycling to attack pattern 13 - Vortex (reach: Area)
+
+=== ATTACK ===
+Position: (93, 25)
+Direction: (1, 0)
+Damage: 5
+Range: 2 blocks, Width: 1
+Dev Test: Cycling to attack pattern 0 - BasicSlash (reach: Arc)
+
+=== ATTACK ===
+Position: (93, 25)
+Direction: (1, 0)
+Damage: 5
+Range: 2 blocks, Width: 1
+
+=== ATTACK ===
+Position: (93, 25)
+Direction: (1, 0)
+Damage: 5
+Range: 2 blocks, Width: 1
+
+=== ATTACK ===
+Position: (93, 25)
+Direction: (1, 0)
+Damage: 5
+Range: 2 blocks, Width: 1
+Dev Test: Cycling to attack pattern 1 - GroundSlam (reach: Area)
+
+=== ATTACK ===
+Position: (93, 25)
+Direction: (1, 0)
+Damage: 5
+Range: 2 blocks, Width: 1
+
+=== ATTACK ===
+Position: (93, 25)
+Direction: (1, 0)
+Damage: 5
+Range: 2 blocks, Width: 1
+
+=== ATTACK ===
+Position: (93, 25)
+Direction: (1, 0)
+Damage: 5
+Range: 2 blocks, Width: 1
+Dev Test: Cycling to attack pattern 2 - WhirlwindAttack (reach: Self_)
+
+=== ATTACK ===
+Position: (93, 25)
+Direction: (1, 0)
+Damage: 5
+Range: 2 blocks, Width: 1
+Dev Test: Cycling to attack pattern 3 - SwordThrust (reach: Line(3))
+
+=== ATTACK ===
+Position: (93, 25)
+Direction: (1, 0)
+Damage: 5
+Range: 2 blocks, Width: 1
+
+=== ATTACK ===
+Position: (93, 25)
+Direction: (1, 0)
+Damage: 5
+Range: 2 blocks, Width: 1
+
+=== ATTACK ===
+Position: (93, 25)
+Direction: (1, 0)
+Damage: 5
+Range: 2 blocks, Width: 1
+Dev Test: Cycling to attack pattern 4 - ArrowShot (reach: Line(5))
+
+=== ATTACK ===
+Position: (93, 25)
+Direction: (1, 0)
+Damage: 5
+Range: 2 blocks, Width: 1
+
+=== ATTACK ===
+Position: (93, 25)
+Direction: (1, 0)
+Damage: 5
+Range: 2 blocks, Width: 1
+Dev Test: Cycling to attack pattern 5 - MultiShot (reach: Cone(3))
+
+=== ATTACK ===
+Position: (93, 25)
+Direction: (1, 0)
+Damage: 5
+Range: 2 blocks, Width: 1
+
+=== ATTACK ===
+Position: (93, 25)
+Direction: (1, 0)
+Damage: 5
+Range: 2 blocks, Width: 1
+Dev Test: Cycling to attack pattern 6 - Barrage (reach: Line(4))
+
+=== ATTACK ===
+Position: (93, 25)
+Direction: (1, 0)
+Damage: 5
+Range: 2 blocks, Width: 1
+
+=== ATTACK ===
+Position: (93, 25)
+Direction: (1, 0)
+Damage: 5
+Range: 2 blocks, Width: 1
+Dev Test: Cycling to attack pattern 7 - PiercingShot (reach: Line(6))
+
+=== ATTACK ===
+Position: (93, 25)
+Direction: (1, 0)
+Damage: 5
+Range: 2 blocks, Width: 1
+
+=== ATTACK ===
+Position: (93, 25)
+Direction: (1, 0)
+Damage: 5
+Range: 2 blocks, Width: 1
+Dev Test: Cycling to attack pattern 8 - Fireball (reach: Area)
+
+=== ATTACK ===
+Position: (93, 25)
+Direction: (1, 0)
+Damage: 5
+Range: 2 blocks, Width: 1
+
+=== ATTACK ===
+Position: (93, 25)
+Direction: (1, 0)
+Damage: 5
+Range: 2 blocks, Width: 1
+Dev Test: Cycling to attack pattern 9 - ChainLightning (reach: Cross)
+
+=== ATTACK ===
+Position: (93, 25)
+Direction: (1, 0)
+Damage: 5
+Range: 2 blocks, Width: 1
+
+=== ATTACK ===
+Position: (93, 25)
+Direction: (1, 0)
+Damage: 5
+Range: 2 blocks, Width: 1
+Dev Test: Cycling to attack pattern 10 - FrostNova (reach: Area)
+
+=== ATTACK ===
+Position: (93, 25)
+Direction: (1, 0)
+Damage: 5
+Range: 2 blocks, Width: 1
+
+=== ATTACK ===
+Position: (93, 25)
+Direction: (1, 0)
+Damage: 5
+Range: 2 blocks, Width: 1
+Dev Test: Cycling to attack pattern 11 - MeteorShower (reach: Area)
+
+=== ATTACK ===
+Position: (93, 25)
+Direction: (1, 0)
+Damage: 5
+Range: 2 blocks, Width: 1
+Dev Test: Cycling to attack pattern 12 - CrescentSlash (reach: Arc)
+
+=== ATTACK ===
+Position: (93, 25)
+Direction: (1, 0)
+Damage: 5
+Range: 2 blocks, Width: 1
+Dev Test: Cycling to attack pattern 13 - Vortex (reach: Area)
+
+=== ATTACK ===
+Position: (93, 25)
+Direction: (1, 0)
+Damage: 5
+Range: 2 blocks, Width: 1
+
+=== ATTACK ===
+Position: (93, 25)
+Direction: (1, 0)
+Damage: 5
+Range: 2 blocks, Width: 1
+
+=== MOVE ATTEMPT ===
+Current pos: (93, 25)
+Target pos: (94, 25)
+MOVE SUCCESSFUL
+Dev Test: Cycling to attack pattern 0 - BasicSlash (reach: Arc)
+
+=== ATTACK ===
+Position: (94, 25)
+Direction: (1, 0)
+Damage: 5
+Range: 2 blocks, Width: 1
+
+=== ATTACK ===
+Position: (94, 25)
+Direction: (1, 0)
+Damage: 5
+Range: 2 blocks, Width: 1
+Dev Test: Cycling to attack pattern 1 - GroundSlam (reach: Area)
+
+=== ATTACK ===
+Position: (94, 25)
+Direction: (1, 0)
+Damage: 5
+Range: 2 blocks, Width: 1
+
+=== ATTACK ===
+Position: (94, 25)
+Direction: (1, 0)
+Damage: 5
+Range: 2 blocks, Width: 1
+Dev Test: Cycling to attack pattern 2 - WhirlwindAttack (reach: Self_)
+
+=== ATTACK ===
+Position: (94, 25)
+Direction: (1, 0)
+Damage: 5
+Range: 2 blocks, Width: 1
+
+=== MOVE ATTEMPT ===
+Current pos: (94, 25)
+Target pos: (95, 25)
+MOVE SUCCESSFUL
+
+=== ATTACK ===
+Position: (95, 25)
+Direction: (1, 0)
+Damage: 5
+Range: 2 blocks, Width: 1
+Dev Test: Cycling to attack pattern 3 - SwordThrust (reach: Line(3))
+
+=== ATTACK ===
+Position: (95, 25)
+Direction: (1, 0)
+Damage: 5
+Range: 2 blocks, Width: 1
+
+=== ATTACK ===
+Position: (95, 25)
+Direction: (1, 0)
+Damage: 5
+Range: 2 blocks, Width: 1
+
+=== ATTACK ===
+Position: (95, 25)
+Direction: (1, 0)
+Damage: 5
+Range: 2 blocks, Width: 1
+Dev Test: Cycling to attack pattern 4 - ArrowShot (reach: Line(5))
+
+=== ATTACK ===
+Position: (95, 25)
+Direction: (1, 0)
+Damage: 5
+Range: 2 blocks, Width: 1
+
+=== ATTACK ===
+Position: (95, 25)
+Direction: (1, 0)
+Damage: 5
+Range: 2 blocks, Width: 1
+Starting position: (89, 29)
+
+=== MOVE ATTEMPT ===
+Current pos: (89, 29)
+Target pos: (89, 28)
+MOVE SUCCESSFUL
+
+=== ATTACK ===
+Position: (89, 28)
+Direction: (0, -1)
+Damage: 5
+Range: 2 blocks, Width: 1
+
+=== MOVE ATTEMPT ===
+Current pos: (89, 28)
+Target pos: (89, 27)
+MOVE SUCCESSFUL
+Dev Test: Cycling to attack pattern: GroundSlam(3)
+
+=== ATTACK ===
+Position: (89, 27)
+Direction: (0, -1)
+Damage: 5
+Range: 2 blocks, Width: 1
+
+=== ATTACK ===
+Position: (89, 27)
+Direction: (0, -1)
+Damage: 5
+Range: 2 blocks, Width: 1
+
+=== ATTACK ===
+Position: (89, 27)
+Direction: (0, -1)
+Damage: 5
+Range: 2 blocks, Width: 1
+Dev Test: Cycling to attack pattern: WhirlwindAttack
+
+=== ATTACK ===
+Position: (89, 27)
+Direction: (0, -1)
+Damage: 5
+Range: 2 blocks, Width: 1
+
+=== MOVE ATTEMPT ===
+Current pos: (89, 27)
+Target pos: (89, 26)
+MOVE SUCCESSFUL
+
+=== ATTACK ===
+Position: (89, 26)
+Direction: (0, -1)
+Damage: 5
+Range: 2 blocks, Width: 1
+Dev Test: Cycling to attack pattern: SwordThrust(2)
+
+=== ATTACK ===
+Position: (89, 26)
+Direction: (0, -1)
+Damage: 5
+Range: 2 blocks, Width: 1
+
+=== ATTACK ===
+Position: (89, 26)
+Direction: (0, -1)
+Damage: 5
+Range: 2 blocks, Width: 1
+Dev Test: Cycling to attack pattern: ArrowShot(4)
+
+=== ATTACK ===
+Position: (89, 26)
+Direction: (0, -1)
+Damage: 5
+Range: 2 blocks, Width: 1
+
+=== ATTACK ===
+Position: (89, 26)
+Direction: (0, -1)
+Damage: 5
+Range: 2 blocks, Width: 1
+Dev Test: Cycling to attack pattern: MultiShot(4, 2)
+
+=== ATTACK ===
+Position: (89, 26)
+Direction: (0, -1)
+Damage: 5
+Range: 2 blocks, Width: 1
+
+=== ATTACK ===
+Position: (89, 26)
+Direction: (0, -1)
+Damage: 5
+Range: 2 blocks, Width: 1
+Dev Test: Cycling to attack pattern: Barrage(3)
+
+=== ATTACK ===
+Position: (89, 26)
+Direction: (0, -1)
+Damage: 5
+Range: 2 blocks, Width: 1
+
+=== ATTACK ===
+Position: (89, 26)
+Direction: (0, -1)
+Damage: 5
+Range: 2 blocks, Width: 1
+Dev Test: Cycling to attack pattern: PiercingShot(5)
+
+=== ATTACK ===
+Position: (89, 26)
+Direction: (0, -1)
+Damage: 5
+Range: 2 blocks, Width: 1
+
+=== ATTACK ===
+Position: (89, 26)
+Direction: (0, -1)
+Damage: 5
+Range: 2 blocks, Width: 1
+Dev Test: Cycling to attack pattern: Fireball(2)
+
+=== ATTACK ===
+Position: (89, 26)
+Direction: (0, -1)
+Damage: 5
+Range: 2 blocks, Width: 1
+
+=== ATTACK ===
+Position: (89, 26)
+Direction: (0, -1)
+Damage: 5
+Range: 2 blocks, Width: 1

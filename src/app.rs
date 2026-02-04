@@ -60,6 +60,8 @@ pub struct App {
     pub char_name: String,
     pub char_name_input_mode: bool,
     pub char_creation_selection: usize, // 0 = name field, 1 = difficulty, 2 = start button
+    // Dev testing state
+    pub dev_attack_pattern: crate::model::attack_pattern::AttackPattern, // Current attack pattern being tested
 }
 
 impl App {
@@ -107,6 +109,7 @@ impl App {
             char_name_input_mode: false,
             char_creation_selection: 0,
             movement_tick_counter: 0,
+            dev_attack_pattern: crate::model::attack_pattern::AttackPattern::BasicSlash,
         }
     }
 
@@ -200,8 +203,14 @@ impl App {
         // Increment movement counter
         self.movement_tick_counter += 1;
 
+        // Apply player speed multiplier to movement requirement
+        // Lower values = faster movement, higher values = slower
+        let speed_adjusted_requirement = (crate::constants::PLAYER_MOVEMENT_TICKS_REQUIRED as f32
+            / self.settings.player_speed)
+            .ceil() as u32;
+
         // Only allow movement every N ticks
-        if self.movement_tick_counter < crate::constants::PLAYER_MOVEMENT_TICKS_REQUIRED {
+        if self.movement_tick_counter < speed_adjusted_requirement {
             return;
         }
 
@@ -329,18 +338,16 @@ impl App {
         self.consume_tick();
     }
 
-    #[allow(dead_code)]
     pub fn get_attack_area(&self) -> Vec<(i32, i32)> {
-        if let Some(weapon) = self.character.weapon_inventory.get_current_weapon() {
-            let (dx, dy) = self.character.last_direction;
-            let (attack_dx, attack_dy) = if dx == 0 && dy == 0 { (0, 1) } else { (dx, dy) };
+        let (dx, dy) = self.character.last_direction;
+        let (attack_dx, attack_dy) = if dx == 0 && dy == 0 { (0, 1) } else { (dx, dy) };
 
-            weapon
-                .reach_shape
-                .get_affected_tiles((attack_dx, attack_dy), self.character_position)
-        } else {
-            Vec::new()
-        }
+        self.dev_attack_pattern.get_affected_tiles(
+            self.character_position.0,
+            self.character_position.1,
+            attack_dx,
+            attack_dy,
+        )
     }
 
     pub fn shoot(&mut self) {
@@ -464,6 +471,28 @@ impl App {
         self.character.weapon_inventory.switch_weapon(slot - 1);
     }
 
+    pub fn drop_weapon(&mut self, slot: usize) {
+        if slot == 0 || slot > 9 {
+            return; // Invalid slot
+        }
+
+        if let Some(weapon) = self.character.weapon_inventory.remove_weapon(slot - 1) {
+            if let Some(floor) = &mut self.current_floor {
+                let (char_x, char_y) = self.character_position;
+                let weapon_item =
+                    crate::model::item::ItemDrop::weapon(weapon.clone(), char_x, char_y);
+                // Try to drop it - if it fails, restore it to inventory
+                if !floor.try_drop_item_adjacent(weapon_item, char_x, char_y) {
+                    // Restore weapon since drop failed
+                    self.character
+                        .weapon_inventory
+                        .weapons
+                        .insert(slot - 1, weapon);
+                }
+            }
+        }
+    }
+
     pub fn use_current_weapon(&mut self) {
         if let Some(weapon) = self.character.weapon_inventory.get_current_weapon() {
             match weapon.weapon_type {
@@ -481,6 +510,48 @@ impl App {
         }
     }
 
+    /// Dev feature: Cycle to next attack pattern for testing
+    pub fn cycle_dev_attack_pattern(&mut self) {
+        use crate::model::attack_pattern::AttackPattern;
+
+        // List all available attack patterns to cycle through
+        let patterns = vec![
+            AttackPattern::BasicSlash,
+            AttackPattern::GroundSlam(3),
+            AttackPattern::WhirlwindAttack,
+            AttackPattern::SwordThrust(2),
+            AttackPattern::ArrowShot(4),
+            AttackPattern::MultiShot(4, 2),
+            AttackPattern::Barrage(3),
+            AttackPattern::PiercingShot(5),
+            AttackPattern::Fireball(2),
+            AttackPattern::ChainLightning(3),
+            AttackPattern::FrostNova(2),
+            AttackPattern::MeteorShower(3, 2),
+            AttackPattern::CrescentSlash,
+            AttackPattern::Vortex(2),
+        ];
+
+        // Find current pattern in the list
+        let current_index = patterns
+            .iter()
+            .position(|p| p == &self.dev_attack_pattern)
+            .unwrap_or(0);
+        let next_index = (current_index + 1) % patterns.len();
+        self.dev_attack_pattern = patterns[next_index].clone();
+
+        use std::io::Write;
+        let msg = format!(
+            "Dev Test: Cycling to attack pattern: {:?}\n",
+            self.dev_attack_pattern
+        );
+        let _ = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open("log.txt")
+            .and_then(|mut f| f.write_all(msg.as_bytes()));
+    }
+
     pub fn pickup_items(&mut self) {
         if let Some(floor) = &mut self.current_floor {
             let (char_x, char_y) = self.character_position;
@@ -496,6 +567,17 @@ impl App {
                         }
                         ItemDropType::Gold(amount) => {
                             self.character.add_gold(amount);
+                        }
+                        ItemDropType::Weapon(weapon) => {
+                            // Try to pick up weapon if inventory has space
+                            if self.character.weapon_inventory.weapons.len() < 9 {
+                                self.character.weapon_inventory.add_weapon(weapon);
+                            } else {
+                                // Inventory full - put weapon back on ground
+                                let weapon_item =
+                                    crate::model::item::ItemDrop::weapon(weapon, char_x, char_y);
+                                let _ = floor.try_drop_item_adjacent(weapon_item, char_x, char_y);
+                            }
                         }
                     }
                 }
@@ -603,18 +685,53 @@ impl App {
             self.character.take_damage(damage);
         }
 
+        // Apply knockback to player
+        if self.character.knockback_velocity != (0.0, 0.0) {
+            let (kb_x, kb_y) = self.character.knockback_velocity;
+            let new_x = (self.character_position.0 as f32 + kb_x).round() as i32;
+            let new_y = (self.character_position.1 as f32 + kb_y).round() as i32;
+
+            if self.is_walkable(new_x, new_y) {
+                self.character_position = (new_x, new_y);
+            }
+
+            // Reduce knockback velocity
+            self.character.knockback_velocity.0 *= 0.7;
+            self.character.knockback_velocity.1 *= 0.7;
+            if self.character.knockback_velocity.0.abs() < 0.1
+                && self.character.knockback_velocity.1.abs() < 0.1
+            {
+                self.character.knockback_velocity = (0.0, 0.0);
+            }
+        }
+
         // Capture values before mutable borrow
         let player_pos = crate::model::enemy::Position::new(
             self.character_position.0,
             self.character_position.1,
         );
+        let player_pos_f32 = (
+            self.character_position.0 as f32,
+            self.character_position.1 as f32,
+        );
         let player_attack_area = self.get_attack_area();
-        let mut attacks_on_player: Vec<i32> = Vec::new();
+        let mut attacks_on_player: Vec<(i32, f32, f32)> = Vec::new(); // (damage, dx, dy)
         let mut hit_enemy_indices: Vec<usize> = Vec::new();
 
         // Update floor items and enemies
         if let Some(floor) = &mut self.current_floor {
             floor.update_items(delta);
+
+            // Emit glints for weapons on the ground
+            for item in &floor.items {
+                if matches!(item.item_type, crate::model::item::ItemDropType::Weapon(_)) {
+                    self.particle_system.emit_periodic_glint(
+                        item.x as f32,
+                        item.y as f32,
+                        Color::Yellow,
+                    );
+                }
+            }
 
             // Get a copy of floor data for pathfinding
             let walkable_tiles: std::collections::HashSet<(i32, i32)> = (0..floor.width as i32)
@@ -628,14 +745,51 @@ impl App {
                     continue;
                 }
 
+                // Apply knockback velocity
+                if enemy.knockback_velocity != (0.0, 0.0) {
+                    let (kb_x, kb_y) = enemy.knockback_velocity;
+                    let new_x = (enemy.position.x as f32 + kb_x).round() as i32;
+                    let new_y = (enemy.position.y as f32 + kb_y).round() as i32;
+
+                    // Check if new position is walkable
+                    if new_x >= 0
+                        && new_x < floor.width as i32
+                        && new_y >= 0
+                        && new_y < floor.height as i32
+                        && walkable_tiles.contains(&(new_x, new_y))
+                    {
+                        enemy.position.x = new_x;
+                        enemy.position.y = new_y;
+                    }
+
+                    // Reduce knockback velocity
+                    enemy.knockback_velocity.0 *= 0.7;
+                    enemy.knockback_velocity.1 *= 0.7;
+                    if enemy.knockback_velocity.0.abs() < 0.1
+                        && enemy.knockback_velocity.1.abs() < 0.1
+                    {
+                        enemy.knockback_velocity = (0.0, 0.0);
+                    }
+                }
+
+                // Emit glints for boss enemies
+                if matches!(enemy.rarity, crate::model::enemy_type::EnemyRarity::Boss) {
+                    self.particle_system.emit_periodic_glint(
+                        enemy.position.x as f32,
+                        enemy.position.y as f32,
+                        Color::Red,
+                    );
+                }
+
                 // Increment movement counter
                 enemy.movement_ticks += 1.0;
                 // Increment attack counter
                 enemy.attack_ticks += 1.0;
 
-                // Simple movement: move toward player if far enough and enough ticks have passed
+                // Simple movement: move toward player if within detection radius and far enough and enough ticks have passed
                 let distance = enemy.position.distance_to(&player_pos);
                 if distance > 1
+                    && distance <= enemy.detection_radius
                     && enemy.movement_ticks
                         >= crate::constants::ENEMY_MOVEMENT_TICKS_REQUIRED as f32
                 {
@@ -680,7 +834,13 @@ impl App {
                         crate::model::enemy_type::EnemyRarity::Elite => 12,
                         crate::model::enemy_type::EnemyRarity::Boss => 20,
                     };
-                    attacks_on_player.push(rarity_damage);
+
+                    // Calculate knockback direction (from enemy to player)
+                    let enemy_pos_f32 = (enemy.position.x as f32, enemy.position.y as f32);
+                    let dx = (player_pos_f32.0 - enemy_pos_f32.0).signum();
+                    let dy = (player_pos_f32.1 - enemy_pos_f32.1).signum();
+
+                    attacks_on_player.push((rarity_damage, dx, dy));
                 }
 
                 // Check if player's attack hitbox overlaps this enemy
@@ -690,34 +850,61 @@ impl App {
             }
 
             // Apply player attack damage to hit enemies
+            let player_pos = (
+                self.character_position.0 as f32,
+                self.character_position.1 as f32,
+            );
             for idx in hit_enemy_indices {
                 if idx < floor.enemies.len() {
                     let damage = self.character.attack_damage;
-                    floor.enemies[idx].take_damage(damage);
+                    let knockback_force = (damage as f32 * 0.1).max(0.5); // knockback proportional to damage
 
-                    // Emit particle effect at enemy position
-                    self.particle_system.emit_impact(
+                    // Calculate knockback direction (from player to enemy)
+                    let enemy_pos = (
                         floor.enemies[idx].position.x as f32,
                         floor.enemies[idx].position.y as f32,
-                        2,
-                        Color::Yellow,
                     );
+                    let dx = (enemy_pos.0 - player_pos.0).signum();
+                    let dy = (enemy_pos.1 - player_pos.1).signum();
+
+                    floor.enemies[idx].apply_knockback(dx, dy, knockback_force);
+                    floor.enemies[idx].take_damage(damage);
                 }
             }
 
-            // Remove dead enemies
-            floor.enemies.retain(|e| e.is_alive());
+            // Handle enemy death and loot drops
+            let mut dead_enemies = Vec::new();
+            for (idx, enemy) in floor.enemies.iter().enumerate() {
+                if !enemy.is_alive() {
+                    dead_enemies.push(idx);
+                }
+            }
+
+            // Drop loot for dead enemies
+            for idx in dead_enemies.iter().rev() {
+                let enemy = floor.enemies.remove(*idx);
+                let enemy_x = enemy.position.x;
+                let enemy_y = enemy.position.y;
+
+                // Drop gold adjacent to enemy
+                let gold_drop = enemy.base_gold;
+                let gold_item = crate::model::item::ItemDrop::gold(gold_drop, enemy_x, enemy_y);
+                let _ = floor.try_drop_item_adjacent(gold_item, enemy_x, enemy_y);
+
+                // Occasionally drop a weapon (33% chance)
+                if rand::random::<f32>() < 0.33 {
+                    let weapon = crate::model::weapon::Weapon::new_sword();
+                    let weapon_drop =
+                        crate::model::item::ItemDrop::weapon(weapon, enemy_x, enemy_y);
+                    let _ = floor.try_drop_item_adjacent(weapon_drop, enemy_x, enemy_y);
+                }
+            }
         }
 
         // Apply damage outside of borrow
-        for attack_damage in attacks_on_player {
+        for (attack_damage, dx, dy) in attacks_on_player {
+            self.character.apply_knockback(dx, dy, 0.5);
             self.character.take_damage(attack_damage);
-            self.particle_system.emit_impact(
-                self.character_position.0 as f32,
-                self.character_position.1 as f32,
-                2,
-                Color::Red,
-            );
         }
 
         // Update particles

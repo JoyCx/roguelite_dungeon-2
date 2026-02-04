@@ -116,9 +116,29 @@ impl WeaponInventory {
         }
     }
 
-    pub fn add_weapon(&mut self, weapon: Weapon) {
+    pub fn add_weapon(&mut self, weapon: Weapon) -> bool {
         if self.weapons.len() < 9 {
             self.weapons.push(weapon);
+            true
+        } else {
+            false // Inventory full
+        }
+    }
+
+    pub fn is_full(&self) -> bool {
+        self.weapons.len() >= 9
+    }
+
+    pub fn remove_weapon(&mut self, slot: usize) -> Option<Weapon> {
+        if slot < self.weapons.len() {
+            let weapon = self.weapons.remove(slot);
+            // Adjust current index if needed
+            if self.current_weapon_index >= self.weapons.len() && self.weapons.len() > 0 {
+                self.current_weapon_index = self.weapons.len() - 1;
+            }
+            Some(weapon)
+        } else {
+            None
         }
     }
 }

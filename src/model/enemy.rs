@@ -33,6 +33,11 @@ pub struct Enemy {
     pub max_health: i32,             // maximum health points
     pub rarity: crate::model::enemy_type::EnemyRarity, // enemy difficulty tier
     pub base_gold: u32,              // gold dropped on defeat
+    #[serde(skip)]
+    pub knockback_velocity: (f32, f32), // knockback direction and remaining force (dx, dy)
+    #[serde(skip)]
+    pub damaged_at: Option<std::time::Instant>, // timestamp of when entity was last damaged
+    pub detection_radius: i32,       // radius within which enemy detects and chases player
 }
 
 impl Enemy {
@@ -53,13 +58,29 @@ impl Enemy {
             max_health: 10,
             rarity: crate::model::enemy_type::EnemyRarity::Fighter,
             base_gold: 10,
+            knockback_velocity: (0.0, 0.0),
+            damaged_at: None,
+            detection_radius: 5, // Default, will be set from template
         }
     }
 
     /// Take damage and return whether enemy is still alive
     pub fn take_damage(&mut self, damage: i32) -> bool {
         self.health = (self.health - damage).max(0);
+        self.damaged_at = Some(std::time::Instant::now());
         self.health > 0
+    }
+
+    pub fn apply_knockback(&mut self, dx: f32, dy: f32, force: f32) {
+        self.knockback_velocity = (dx * force, dy * force);
+    }
+
+    pub fn is_damaged_animating(&self) -> bool {
+        if let Some(damaged_at) = self.damaged_at {
+            damaged_at.elapsed().as_secs_f32() < 1.0
+        } else {
+            false
+        }
     }
 
     /// Check if enemy is alive

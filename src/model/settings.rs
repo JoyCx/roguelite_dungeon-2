@@ -19,6 +19,7 @@ pub struct Settings {
     pub pause: String,
     pub difficulty: Difficulty,
     pub default_difficulty: Difficulty,
+    pub player_speed: f32, // Multiplier for player movement speed (1.0 = default)
 }
 
 impl Default for Settings {
@@ -39,6 +40,7 @@ impl Default for Settings {
             pause: "P".into(),
             difficulty: Difficulty::Normal,
             default_difficulty: Difficulty::Normal,
+            player_speed: 1.0, // Default speed multiplier
         }
     }
 }

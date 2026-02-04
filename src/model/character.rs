@@ -6,7 +6,6 @@ use std::time::Instant;
 
 #[derive(Clone, Debug)]
 pub struct Character {
-    #[allow(dead_code)]
     pub speed: f32,
 
     pub name: String,
@@ -58,6 +57,10 @@ pub struct Character {
 
     // Gold/Currency wallet
     pub gold: u32,
+
+    // Knockback system
+    pub knockback_velocity: (f32, f32), // knockback direction and remaining force (dx, dy)
+    pub damaged_at: Option<Instant>,    // timestamp of when entity was last damaged
 }
 
 impl Default for Character {
@@ -88,12 +91,13 @@ impl Default for Character {
             ultimate: Ultimate::default(),
             ultimate_charge: 0.0,
             gold: 0,
+            knockback_velocity: (0.0, 0.0),
+            damaged_at: None,
         }
     }
 }
 
 impl Character {
-    #[allow(dead_code)]
     pub fn new(speed: f32) -> Self {
         Self {
             speed,
@@ -207,6 +211,19 @@ impl Character {
 
     pub fn take_damage(&mut self, amount: i32) {
         self.health = (self.health - amount).max(0);
+        self.damaged_at = Some(Instant::now());
+    }
+
+    pub fn apply_knockback(&mut self, dx: f32, dy: f32, force: f32) {
+        self.knockback_velocity = (dx * force, dy * force);
+    }
+
+    pub fn is_damaged_animating(&self) -> bool {
+        if let Some(damaged_at) = self.damaged_at {
+            damaged_at.elapsed().as_secs_f32() < 1.0
+        } else {
+            false
+        }
     }
 
     pub fn is_alive(&self) -> bool {
