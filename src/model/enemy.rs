@@ -96,7 +96,7 @@ impl Enemy {
     /// Check if enemy can move to a position (respects walls if collision_enabled)
     pub fn can_move_to(&self, x: i32, y: i32, floor: &crate::model::floor::Floor) -> bool {
         // Check bounds first
-        if x < 0 || x >= floor.width as i32 || y < 0 || y >= floor.height as i32 {
+        if x < 0 || x >= floor.width || y < 0 || y >= floor.height {
             return false;
         }
 
@@ -162,7 +162,7 @@ impl Enemy {
         ];
 
         use rand::seq::SliceRandom;
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
 
         // Shuffle directions for random walk
         let mut dirs = directions.to_vec();
@@ -257,7 +257,7 @@ impl Enemy {
     fn reconstruct_path(
         &self,
         came_from: &HashMap<(i32, i32), (i32, i32)>,
-        mut current: Position,
+        current: Position,
     ) -> Vec<Position> {
         let mut path = vec![current.clone()];
         let mut current_key = (current.x, current.y);
@@ -265,7 +265,6 @@ impl Enemy {
         while let Some(&parent_key) = came_from.get(&current_key) {
             let parent = Position::new(parent_key.0, parent_key.1);
             path.push(parent.clone());
-            current = parent;
             current_key = parent_key;
         }
 
@@ -293,7 +292,7 @@ impl Enemy {
 
         let mut valid_positions = Vec::new();
         let mut occupied_positions = std::collections::HashSet::new();
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
 
         // Mark all enemy positions as occupied
         for enemy in enemies {
@@ -315,9 +314,9 @@ impl Enemy {
         }
 
         // Scan floor for valid spawn positions
-        for attempt in 0..max_attempts {
-            let x = rng.gen_range(1..floor.width as i32 - 1);
-            let y = rng.gen_range(1..floor.height as i32 - 1);
+        for _attempt in 0..max_attempts {
+            let x = rng.random_range(1..floor.width - 1);
+            let y = rng.random_range(1..floor.height - 1);
 
             let pos = (x, y);
 
@@ -368,9 +367,9 @@ impl Enemy {
     ) -> bool {
         // Check bounds
         if position.x < 0
-            || position.x >= floor.width as i32
+            || position.x >= floor.width
             || position.y < 0
-            || position.y >= floor.height as i32
+            || position.y >= floor.height
         {
             return false;
         }
@@ -398,6 +397,7 @@ impl Enemy {
 
 /// Helper struct for A* priority queue
 #[derive(Clone, Debug)]
+#[allow(dead_code)] // Used in A* implementation
 struct AStarNode {
     position: Position,
     f_score: i32,

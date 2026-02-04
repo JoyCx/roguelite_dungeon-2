@@ -120,17 +120,12 @@ impl AttackPattern {
         dir_x: i32,
         dir_y: i32,
     ) -> Vec<(i32, i32)> {
-        // For physics, we usually want the area covered by the bulk of the attack.
-        // This grabs the union of all tiles involved to ensure nothing is missed,
-        // or you could optimize this to only calculate the specific hit zone.
         let frames = self.get_animation_frames(origin_x, origin_y, dir_x, dir_y);
-        let mut all_tiles = Vec::new();
-        for frame in frames {
-            all_tiles.extend(frame.tiles);
+        if let Some(last_frame) = frames.last() {
+            last_frame.tiles.clone()
+        } else {
+            vec![]
         }
-        all_tiles.sort();
-        all_tiles.dedup();
-        all_tiles
     }
 
     // === CLOSE COMBAT ANIMATIONS ===
@@ -142,50 +137,31 @@ impl AttackPattern {
         dir_x: i32,
         dir_y: i32,
     ) -> Vec<AnimationFrame> {
-        let mut frames = vec![];
+        // 3-tile slash in direction of attack with spreading color
+        let mut tiles = vec![(origin_x + dir_x, origin_y + dir_y)];
 
-        // 1. Wind up (small indicator)
-        frames.push(AnimationFrame {
-            tiles: vec![(origin_x + dir_x, origin_y + dir_y)],
-            color: Color::DarkGray,
-            symbol: '.',
-            frame_duration: 0.05,
-        });
-
-        // 2. The Swing Arc
-        // Calculate perpendicular vectors for the "width" of the slash
+        // Add perpendicular tiles (the "slash width")
         let perp_x = if dir_y != 0 { 1 } else { 0 };
         let perp_y = if dir_x != 0 { 1 } else { 0 };
+        tiles.push((origin_x + dir_x + perp_x, origin_y + dir_y + perp_y));
+        tiles.push((origin_x + dir_x - perp_x, origin_y + dir_y - perp_y));
+        tiles.sort();
+        tiles.dedup();
 
-        let center = (origin_x + dir_x, origin_y + dir_y);
-        let left = (origin_x + dir_x + perp_x, origin_y + dir_y + perp_y);
-        let right = (origin_x + dir_x - perp_x, origin_y + dir_y - perp_y);
-
-        // Frame 2: Start of swing
-        frames.push(AnimationFrame {
-            tiles: vec![right],
-            color: Color::White,
-            symbol: '*',
-            frame_duration: 0.04,
-        });
-
-        // Frame 3: Mid swing (Hit frame)
-        frames.push(AnimationFrame {
-            tiles: vec![right, center, left],
-            color: Color::LightYellow,
-            symbol: 'X', // Impact
-            frame_duration: 0.06,
-        });
-
-        // Frame 4: Follow through
-        frames.push(AnimationFrame {
-            tiles: vec![left],
-            color: Color::Yellow,
-            symbol: '/',
-            frame_duration: 0.04,
-        });
-
-        frames
+        vec![
+            AnimationFrame {
+                tiles: tiles.clone(),
+                color: Color::Yellow,
+                symbol: '/',
+                frame_duration: 0.1,
+            },
+            AnimationFrame {
+                tiles,
+                color: Color::White,
+                symbol: '\\',
+                frame_duration: 0.1,
+            },
+        ]
     }
 
     fn ground_slam_animation(
@@ -194,117 +170,116 @@ impl AttackPattern {
         origin_y: i32,
         reach: i32,
     ) -> Vec<AnimationFrame> {
+        // Creates expanding shockwave - ripple/wave then explosion burst
         let mut frames = vec![];
 
-        // 1. Build up (Center focuses)
+        // Initial impact
         frames.push(AnimationFrame {
             tiles: vec![(origin_x, origin_y)],
-            color: Color::White,
-            symbol: '●',
-            frame_duration: 0.1,
+            color: Color::Red,
+            symbol: '*',
+            frame_duration: 0.06,
         });
 
-        // 2. Explosion and expanding wave
-        for r in 1..=reach {
-            let mut wave_tiles = vec![];
-            let mut debris_tiles = vec![];
+        // Wave/ripple frames (diamond/ring outward)
+        for ring in 1..=reach {
+            let mut ring_tiles = vec![];
 
-            // Create a diamond/circle shape
-            for dx in -r..=r {
-                for dy in -r..=r {
-                    let dist = dx.abs() + dy.abs();
-                    if dist == r {
-                        wave_tiles.push((origin_x + dx, origin_y + dy));
-                    } else if dist < r && (dx + dy) % 2 == 0 {
-                        debris_tiles.push((origin_x + dx, origin_y + dy));
-                    }
-                }
+            // Diamond perimeter: all positions where |dx|+|dy| == ring
+            for dx in -ring..=ring {
+                let dy = ring - dx.abs();
+                ring_tiles.push((origin_x + dx, origin_y + dy));
+                ring_tiles.push((origin_x + dx, origin_y - dy));
             }
 
-            // Combine wave and debris
-            let mut all_frame_tiles = wave_tiles.clone();
-            all_frame_tiles.extend(debris_tiles);
+            ring_tiles.sort();
+            ring_tiles.dedup();
 
             frames.push(AnimationFrame {
-                tiles: all_frame_tiles,
-                color: Color::Indexed(208), // Orange-ish
-                symbol: '#',
-                frame_duration: 0.05,
+                tiles: ring_tiles.clone(),
+                color: if ring % 2 == 0 {
+                    Color::Yellow
+                } else {
+                    Color::LightRed
+                },
+                symbol: '~',
+                frame_duration: 0.07 - (ring as f32 * 0.006).min(0.03),
+            });
+
+            // Slight debris flash behind the wave for polish
+            let mut debris = vec![];
+            for (x, y) in ring_tiles.iter().take((ring_tiles.len() / 4).max(1)) {
+                debris.push((*x, *y));
+            }
+            frames.push(AnimationFrame {
+                tiles: debris,
+                color: Color::LightYellow,
+                symbol: '^',
+                frame_duration: 0.03,
             });
         }
 
-        // 3. Lingering cracks
-        let mut cracks = vec![];
+        // Final explosion: filled diamond (strong visual burst)
+        let mut burst = vec![];
         for dx in -reach..=reach {
             for dy in -reach..=reach {
-                if dx.abs() + dy.abs() <= reach && (dx * dy) % 3 == 0 {
-                    cracks.push((origin_x + dx, origin_y + dy));
+                if dx.abs() + dy.abs() <= reach {
+                    burst.push((origin_x + dx, origin_y + dy));
                 }
             }
         }
+        burst.sort();
+        burst.dedup();
 
         frames.push(AnimationFrame {
-            tiles: cracks,
-            color: Color::DarkGray,
+            tiles: burst.clone(),
+            color: Color::LightRed,
+            symbol: '*',
+            frame_duration: 0.10,
+        });
+
+        // Fade-out embers
+        frames.push(AnimationFrame {
+            tiles: vec![(origin_x, origin_y)],
+            color: Color::Yellow,
             symbol: '.',
-            frame_duration: 0.2,
+            frame_duration: 0.08,
         });
 
         frames
     }
 
     fn whirlwind_animation(&self, origin_x: i32, origin_y: i32) -> Vec<AnimationFrame> {
+        // Spinning attack hitting all 8 directions
         let mut frames = vec![];
 
-        // Define the 8 surrounding tiles in clockwise order
-        let circle = vec![
-            (0, -1),
-            (1, -1),
-            (1, 0),
-            (1, 1),
-            (0, 1),
-            (-1, 1),
-            (-1, 0),
-            (-1, -1),
+        // Create all 8 adjacent tiles
+        let all_adjacent: Vec<(i32, i32)> = vec![
+            (origin_x + 1, origin_y),
+            (origin_x + 1, origin_y + 1),
+            (origin_x, origin_y + 1),
+            (origin_x - 1, origin_y + 1),
+            (origin_x - 1, origin_y),
+            (origin_x - 1, origin_y - 1),
+            (origin_x, origin_y - 1),
+            (origin_x + 1, origin_y - 1),
         ];
 
-        // 3 Full rotations, getting faster
-        for rotation in 0..3 {
-            for i in 0..8 {
-                // Skip frames to make it spin faster
-                if rotation == 1 && i % 2 != 0 {
-                    continue;
-                }
-                if rotation == 2 && i % 4 != 0 {
-                    continue;
-                }
-
-                let (dx, dy) = circle[i];
-                let (prev_dx, prev_dy) = circle[(i + 7) % 8]; // Tail
-
-                frames.push(AnimationFrame {
-                    tiles: vec![
-                        (origin_x + dx, origin_y + dy),
-                        (origin_x + prev_dx, origin_y + prev_dy),
-                    ],
-                    color: Color::Cyan,
-                    symbol: if rotation == 2 { '@' } else { '~' },
-                    frame_duration: 0.02,
-                });
+        // Create spinning animation with 4 frames (rotate through all tiles)
+        for frame_idx in 0..4 {
+            let mut tiles = vec![];
+            for i in 0..2 {
+                let idx = (frame_idx * 2 + i) % 8;
+                tiles.push(all_adjacent[idx]);
             }
-        }
 
-        // Final burst outward
-        let mut all_adj = vec![];
-        for (dx, dy) in circle.iter() {
-            all_adj.push((origin_x + dx, origin_y + dy));
+            frames.push(AnimationFrame {
+                tiles,
+                color: Color::Cyan,
+                symbol: '*',
+                frame_duration: 0.06,
+            });
         }
-        frames.push(AnimationFrame {
-            tiles: all_adj,
-            color: Color::White,
-            symbol: '*',
-            frame_duration: 0.1,
-        });
 
         frames
     }
@@ -317,53 +292,36 @@ impl AttackPattern {
         dir_y: i32,
         reach: i32,
     ) -> Vec<AnimationFrame> {
+        // Piercing thrust - extends forward in stages
         let mut frames = vec![];
 
-        // 1. Charge
-        frames.push(AnimationFrame {
-            tiles: vec![(origin_x, origin_y)],
-            color: Color::White,
-            symbol: '+',
-            frame_duration: 0.1,
-        });
+        for distance in 1..=reach {
+            let mut tiles = vec![];
 
-        // 2. The Thrust (Instant line appear)
-        let mut thrust_line = vec![];
-        for i in 1..=reach {
-            thrust_line.push((origin_x + dir_x * i, origin_y + dir_y * i));
+            // Create the thrust area (center line + sides)
+            for i in 1..=distance {
+                let tile_x = origin_x + (dir_x * i);
+                let tile_y = origin_y + (dir_y * i);
+                tiles.push((tile_x, tile_y));
+
+                // Add sides for width
+                let perp_x = if dir_y != 0 { 1 } else { 0 };
+                let perp_y = if dir_x != 0 { 1 } else { 0 };
+                if i >= distance - 1 {
+                    tiles.push((tile_x + perp_x, tile_y + perp_y));
+                    tiles.push((tile_x - perp_x, tile_y - perp_y));
+                }
+            }
+            tiles.sort();
+            tiles.dedup();
+
+            frames.push(AnimationFrame {
+                tiles,
+                color: Color::Magenta,
+                symbol: '>',
+                frame_duration: 0.05,
+            });
         }
-
-        // Flash bright
-        frames.push(AnimationFrame {
-            tiles: thrust_line.clone(),
-            color: Color::Cyan,
-            symbol: '≡', // Fast motion lines
-            frame_duration: 0.05,
-        });
-
-        // 3. The Tip Impact (Heavy damage visual)
-        let tip = (origin_x + dir_x * reach, origin_y + dir_y * reach);
-        let mut impact_area = vec![tip];
-        // Add adjacent to tip for "impact"
-        impact_area.push((tip.0 + 1, tip.1));
-        impact_area.push((tip.0 - 1, tip.1));
-        impact_area.push((tip.0, tip.1 + 1));
-        impact_area.push((tip.0, tip.1 - 1));
-
-        frames.push(AnimationFrame {
-            tiles: impact_area,
-            color: Color::LightCyan,
-            symbol: '*',
-            frame_duration: 0.1,
-        });
-
-        // 4. Fade
-        frames.push(AnimationFrame {
-            tiles: thrust_line,
-            color: Color::Blue,
-            symbol: '-',
-            frame_duration: 0.05,
-        });
 
         frames
     }
@@ -378,37 +336,28 @@ impl AttackPattern {
         dir_y: i32,
         reach: i32,
     ) -> Vec<AnimationFrame> {
+        // Arrow travels in straight line with trailing effect
         let mut frames = vec![];
 
-        // Travel Frames
-        for i in 1..=reach {
-            let current = (origin_x + dir_x * i, origin_y + dir_y * i);
-            let prev = (origin_x + dir_x * (i - 1), origin_y + dir_y * (i - 1));
+        for distance in 1..=reach {
+            let arrow_x = origin_x + (dir_x * distance);
+            let arrow_y = origin_y + (dir_y * distance);
 
-            let mut tiles = vec![current];
-            if i > 1 {
-                tiles.push(prev);
-            } // Trail
-
-            // Pick symbol based on direction
-            let symbol = if dir_x.abs() > dir_y.abs() { '-' } else { '|' };
+            // Create trailing effect
+            let mut tiles = vec![(arrow_x, arrow_y)];
+            if distance > 1 {
+                let trail_x = origin_x + (dir_x * (distance - 1));
+                let trail_y = origin_y + (dir_y * (distance - 1));
+                tiles.push((trail_x, trail_y));
+            }
 
             frames.push(AnimationFrame {
                 tiles,
                 color: Color::Yellow,
-                symbol,
-                frame_duration: 0.03, // Fast
+                symbol: '^',
+                frame_duration: 0.03,
             });
         }
-
-        // Impact Frame
-        let hit = (origin_x + dir_x * reach, origin_y + dir_y * reach);
-        frames.push(AnimationFrame {
-            tiles: vec![hit],
-            color: Color::LightRed,
-            symbol: 'X',
-            frame_duration: 0.05,
-        });
 
         frames
     }
@@ -422,37 +371,36 @@ impl AttackPattern {
         reach: i32,
         spread: i32,
     ) -> Vec<AnimationFrame> {
+        // Three arrows spreading in a fan pattern
         let mut frames = vec![];
 
-        // Perp vectors
-        let perp_x = if dir_y != 0 { 1 } else { 0 };
-        let perp_y = if dir_x != 0 { 1 } else { 0 };
-
-        for i in 1..=reach {
+        for distance in 1..=reach {
             let mut tiles = vec![];
 
-            // Calculate spread factor based on distance (cone shape)
-            let current_spread = (i as f32 / reach as f32 * spread as f32).ceil() as i32;
+            // Center arrow
+            tiles.push((origin_x + (dir_x * distance), origin_y + (dir_y * distance)));
 
-            // Center projectile
-            tiles.push((origin_x + dir_x * i, origin_y + dir_y * i));
+            // Spread sideways based on direction
+            let perp_x = if dir_y != 0 { 1 } else { 0 };
+            let perp_y = if dir_x != 0 { 1 } else { 0 };
 
-            // Side projectiles
-            if current_spread > 0 {
+            // Left and right arrows - ensure spread appears by distance 2
+            let actual_spread = if distance >= 2 { spread } else { 0 };
+            for offset in 1..=actual_spread {
                 tiles.push((
-                    origin_x + dir_x * i + perp_x * current_spread,
-                    origin_y + dir_y * i + perp_y * current_spread,
+                    origin_x + (dir_x * distance) + (perp_x * offset),
+                    origin_y + (dir_y * distance) + (perp_y * offset),
                 ));
                 tiles.push((
-                    origin_x + dir_x * i - perp_x * current_spread,
-                    origin_y + dir_y * i - perp_y * current_spread,
+                    origin_x + (dir_x * distance) - (perp_x * offset),
+                    origin_y + (dir_y * distance) - (perp_y * offset),
                 ));
             }
 
             frames.push(AnimationFrame {
                 tiles,
-                color: Color::LightGreen,
-                symbol: 'v',
+                color: Color::LightYellow,
+                symbol: '^',
                 frame_duration: 0.04,
             });
         }
@@ -468,32 +416,21 @@ impl AttackPattern {
         dir_y: i32,
         reach: i32,
     ) -> Vec<AnimationFrame> {
+        // Rapid successive hits along a line
         let mut frames = vec![];
 
-        // Machine-gun style: multiple small hits traveling fast
-        for i in 0..reach + 3 {
-            let mut tiles = vec![];
+        for distance in 1..=reach {
+            let tile_x = origin_x + (dir_x * distance);
+            let tile_y = origin_y + (dir_y * distance);
 
-            // Generate 3 "bullets" in the air at once
-            if i < reach {
-                tiles.push((origin_x + dir_x * (i + 1), origin_y + dir_y * (i + 1)));
-            }
-            if i > 1 && i - 1 < reach {
-                tiles.push((origin_x + dir_x * i, origin_y + dir_y * i));
-            }
-            if i > 3 && i - 3 < reach {
-                tiles.push((origin_x + dir_x * (i - 2), origin_y + dir_y * (i - 2)));
-            }
-
-            if !tiles.is_empty() {
-                frames.push(AnimationFrame {
-                    tiles,
-                    color: Color::LightYellow,
-                    symbol: '•',
-                    frame_duration: 0.03,
-                });
-            }
+            frames.push(AnimationFrame {
+                tiles: vec![(tile_x, tile_y)],
+                color: Color::LightRed,
+                symbol: '!',
+                frame_duration: 0.02,
+            });
         }
+
         frames
     }
 
@@ -505,30 +442,32 @@ impl AttackPattern {
         dir_y: i32,
         reach: i32,
     ) -> Vec<AnimationFrame> {
+        // Same as arrow but with stronger visual indicator
         let mut frames = vec![];
 
-        // Travels normally...
-        for i in 1..=reach {
+        for distance in 1..=reach {
+            let arrow_x = origin_x + (dir_x * distance);
+            let arrow_y = origin_y + (dir_y * distance);
+
+            let mut tiles = vec![(arrow_x, arrow_y)];
+            if distance > 2 {
+                tiles.push((
+                    origin_x + (dir_x * (distance - 1)),
+                    origin_y + (dir_y * (distance - 1)),
+                ));
+                tiles.push((
+                    origin_x + (dir_x * (distance - 2)),
+                    origin_y + (dir_y * (distance - 2)),
+                ));
+            }
+
             frames.push(AnimationFrame {
-                tiles: vec![(origin_x + dir_x * i, origin_y + dir_y * i)],
-                color: Color::Magenta,
+                tiles,
+                color: Color::White,
                 symbol: '»',
-                frame_duration: 0.02,
+                frame_duration: 0.03,
             });
         }
-
-        // ...but leaves a "vacuum" trail behind that lingers
-        let mut trail = vec![];
-        for i in 1..=reach {
-            trail.push((origin_x + dir_x * i, origin_y + dir_y * i));
-        }
-
-        frames.push(AnimationFrame {
-            tiles: trail,
-            color: Color::DarkGray,
-            symbol: ':',
-            frame_duration: 0.15,
-        });
 
         frames
     }
@@ -543,69 +482,110 @@ impl AttackPattern {
         dir_y: i32,
         radius: i32,
     ) -> Vec<AnimationFrame> {
-        let mut frames = vec![];
+        // Launch three small fireballs in sequence; each travels then explodes
+        let mut frames: Vec<AnimationFrame> = Vec::new();
 
-        // Define target distance (standard cast range)
-        let travel_dist = 6;
-        let target_x = origin_x + dir_x * travel_dist;
-        let target_y = origin_y + dir_y * travel_dist;
-
-        // 1. Travel Phase: Moving Dot
-        for i in 1..=travel_dist {
-            frames.push(AnimationFrame {
-                tiles: vec![(origin_x + dir_x * i, origin_y + dir_y * i)],
-                color: Color::Red,
-                symbol: 'o',
-                frame_duration: 0.04,
-            });
-        }
-
-        // 2. Impact Phase: Flash
-        frames.push(AnimationFrame {
-            tiles: vec![(target_x, target_y)],
-            color: Color::White,
-            symbol: '@',
-            frame_duration: 0.05,
-        });
-
-        // 3. Explosion Phase: Expanding Circle
-        for r in 1..=radius {
-            let mut explosion_tiles = vec![];
-
-            // Fill circle
+        // Helper: generate filled circle
+        let mut circle = |cx: i32, cy: i32, r: i32| -> Vec<(i32, i32)> {
+            let mut tiles = Vec::new();
+            let r_sq = r * r;
             for dx in -r..=r {
                 for dy in -r..=r {
-                    if dx * dx + dy * dy <= r * r {
-                        explosion_tiles.push((target_x + dx, target_y + dy));
+                    if dx * dx + dy * dy <= r_sq {
+                        tiles.push((cx + dx, cy + dy));
                     }
                 }
             }
+            tiles.sort();
+            tiles.dedup();
+            tiles
+        };
 
-            frames.push(AnimationFrame {
-                tiles: explosion_tiles,
-                color: if r % 2 == 0 {
-                    Color::Red
+        // If no direction provided, show three centered explosions staggered
+        let dir_is_zero = dir_x == 0 && dir_y == 0;
+
+        for i in 0..3 {
+            // travel distance before impact (staggered so they come one-after-another)
+            let travel = 2 + i * 2; // 2,4,6 steps
+
+            // Travel frames: small tail and head
+            for step in 1..=travel {
+                let head_x = if dir_is_zero {
+                    origin_x
                 } else {
-                    Color::LightRed
-                },
-                symbol: if r == radius { '#' } else { '*' },
+                    origin_x + dir_x * step
+                };
+                let head_y = if dir_is_zero {
+                    origin_y
+                } else {
+                    origin_y + dir_y * step
+                };
+
+                let mut tiles = vec![(head_x, head_y)];
+
+                // trailing ember
+                if step > 1 {
+                    let tail_x = if dir_is_zero {
+                        origin_x
+                    } else {
+                        origin_x + dir_x * (step - 1)
+                    };
+                    let tail_y = if dir_is_zero {
+                        origin_y
+                    } else {
+                        origin_y + dir_y * (step - 1)
+                    };
+                    tiles.push((tail_x, tail_y));
+                }
+
+                frames.push(AnimationFrame {
+                    tiles,
+                    color: Color::LightRed,
+                    symbol: '•',
+                    frame_duration: 0.04,
+                });
+            }
+
+            // Impact point
+            let impact_x = if dir_is_zero {
+                origin_x
+            } else {
+                origin_x + dir_x * travel
+            };
+            let impact_y = if dir_is_zero {
+                origin_y
+            } else {
+                origin_y + dir_y * travel
+            };
+
+            // Explosion: quick inner burst then outer ring
+            // Inner burst
+            frames.push(AnimationFrame {
+                tiles: circle(impact_x, impact_y, 0),
+                color: Color::Yellow,
+                symbol: '*',
+                frame_duration: 0.06,
+            });
+
+            // Expanding rings
+            for r in 1..=radius {
+                let mut tiles = circle(impact_x, impact_y, r);
+                frames.push(AnimationFrame {
+                    tiles,
+                    color: if r == 1 { Color::LightRed } else { Color::Red },
+                    symbol: '*',
+                    frame_duration: 0.06 - (r as f32 * 0.005).max(0.02),
+                });
+            }
+
+            // Small lingering ember frame between fireballs
+            frames.push(AnimationFrame {
+                tiles: vec![(impact_x, impact_y)],
+                color: Color::LightYellow,
+                symbol: '.',
                 frame_duration: 0.06,
             });
         }
-
-        // 4. Smoke Phase
-        frames.push(AnimationFrame {
-            tiles: vec![
-                (target_x, target_y),
-                (target_x + 1, target_y),
-                (target_x - 1, target_y),
-                (target_x, target_y + 1),
-                (target_x, target_y - 1),
-            ],
-            color: Color::DarkGray,
-            symbol: '%',
-            frame_duration: 0.1,
-        });
 
         frames
     }
@@ -618,53 +598,75 @@ impl AttackPattern {
         dir_y: i32,
         reach: i32,
     ) -> Vec<AnimationFrame> {
-        let mut frames = vec![];
-        let mut path_points = vec![(origin_x, origin_y)];
+        // Branching, fading chain lightning with short trails and occasional forks
+        let mut frames: Vec<AnimationFrame> = Vec::new();
 
-        let mut curr_x = origin_x;
-        let mut curr_y = origin_y;
+        let mut heads: Vec<(i32, i32)> = vec![(origin_x, origin_y)];
 
-        // Generate a random-looking zigzag path
-        for i in 1..=reach {
-            curr_x += dir_x;
-            curr_y += dir_y;
+        for step in 1..=reach {
+            let mut next_heads: Vec<(i32, i32)> = Vec::new();
 
-            // Add jitter
-            let jitter = if i % 2 == 0 { 1 } else { -1 };
-            let j_x = if dir_y != 0 { jitter } else { 0 };
-            let j_y = if dir_x != 0 { jitter } else { 0 };
+            // For each head, advance and create visible bolt + a faint trail
+            for (hx, hy) in heads.iter() {
+                let nx = hx + dir_x;
+                let ny = hy + dir_y;
 
-            path_points.push((curr_x + j_x, curr_y + j_y));
-        }
+                // Main bolt and short trail
+                let mut tiles = vec![(nx, ny)];
+                tiles.push((*hx, *hy));
 
-        // Frame 1: The Strike (Bright)
-        frames.push(AnimationFrame {
-            tiles: path_points.clone(),
-            color: Color::LightYellow, // Intense white/yellow
-            symbol: '⚡',
-            frame_duration: 0.05,
-        });
+                // Occasionally fork perpendicular
+                if step % 3 == 0 {
+                    let perp_x = if dir_y != 0 { 1 } else { 0 };
+                    let perp_y = if dir_x != 0 { 1 } else { 0 };
+                    tiles.push((nx + perp_x, ny + perp_y));
+                    next_heads.push((nx + perp_x, ny + perp_y));
+                }
 
-        // Frame 2: The Afterimage (Blue)
-        frames.push(AnimationFrame {
-            tiles: path_points.clone(),
-            color: Color::LightBlue,
-            symbol: 'z',
-            frame_duration: 0.05,
-        });
+                next_heads.push((nx, ny));
 
-        // Frame 3: Sparks (Scattered)
-        let mut sparks = vec![];
-        for (x, y) in path_points.iter() {
-            if (x + y) % 2 == 0 {
-                sparks.push((*x, *y));
+                frames.push(AnimationFrame {
+                    tiles,
+                    color: if step % 2 == 0 {
+                        Color::LightCyan
+                    } else {
+                        Color::Cyan
+                    },
+                    symbol: '≈',
+                    frame_duration: 0.04,
+                });
+
+                // Short fading after-image (fainter)
+                frames.push(AnimationFrame {
+                    tiles: vec![(*hx, *hy)],
+                    color: Color::White,
+                    symbol: '.',
+                    frame_duration: 0.03,
+                });
             }
+
+            // cap number of simultaneous heads to avoid explosion
+            heads = next_heads.into_iter().take(6).collect();
         }
+
+        // Final impact flash at last heads
+        let mut final_tiles = Vec::new();
+        for (x, y) in heads.iter() {
+            final_tiles.push((*x, *y));
+            // small surrounding sparks
+            final_tiles.push((x + 1, *y));
+            final_tiles.push((x - 1, *y));
+            final_tiles.push((*x, y + 1));
+            final_tiles.push((*x, y - 1));
+        }
+        final_tiles.sort();
+        final_tiles.dedup();
+
         frames.push(AnimationFrame {
-            tiles: sparks,
-            color: Color::Blue,
-            symbol: '.',
-            frame_duration: 0.05,
+            tiles: final_tiles,
+            color: Color::LightBlue,
+            symbol: '⚡',
+            frame_duration: 0.08,
         });
 
         frames
@@ -676,56 +678,62 @@ impl AttackPattern {
         origin_y: i32,
         reach: i32,
     ) -> Vec<AnimationFrame> {
-        let mut frames = vec![];
+        // Dramatic expanding diamond with icy shard overlays and lingering frost
+        let mut frames: Vec<AnimationFrame> = Vec::new();
 
-        // 1. Charge Up (Suck in)
+        // Small initial freeze at center
         frames.push(AnimationFrame {
-            tiles: vec![
-                (origin_x + 1, origin_y),
-                (origin_x - 1, origin_y),
-                (origin_x, origin_y + 1),
-                (origin_x, origin_y - 1),
-            ],
-            color: Color::Cyan,
-            symbol: '>',
-            frame_duration: 0.1,
+            tiles: vec![(origin_x, origin_y)],
+            color: Color::LightBlue,
+            symbol: '✦',
+            frame_duration: 0.06,
         });
 
-        // 2. Blast Out
-        for r in 1..=reach {
-            let mut edge_tiles = vec![];
-            for dx in -r..=r {
-                for dy in -r..=r {
-                    // Manhattan distance for diamond shape
-                    if dx.abs() + dy.abs() == r {
-                        edge_tiles.push((origin_x + dx, origin_y + dy));
-                    }
-                }
+        for distance in 1..=reach {
+            let mut tiles = vec![];
+
+            // Diamond perimeter (Manhattan distance == distance)
+            for dx in -distance..=distance {
+                let dy = distance - dx.abs();
+                tiles.push((origin_x + dx, origin_y + dy));
+                tiles.push((origin_x + dx, origin_y - dy));
+            }
+            tiles.sort();
+            tiles.dedup();
+
+            // Ice shards: some cardinal spikes inside the ring
+            let mut shards = vec![];
+            if distance % 2 == 0 {
+                shards.push((origin_x + distance, origin_y));
+                shards.push((origin_x - distance, origin_y));
+                shards.push((origin_x, origin_y + distance));
+                shards.push((origin_x, origin_y - distance));
             }
 
             frames.push(AnimationFrame {
-                tiles: edge_tiles,
-                color: Color::White,
+                tiles: tiles.clone(),
+                color: Color::Blue,
                 symbol: '*',
-                frame_duration: 0.05,
+                frame_duration: 0.08 - (distance as f32 * 0.005).min(0.04),
+            });
+
+            if !shards.is_empty() {
+                frames.push(AnimationFrame {
+                    tiles: shards,
+                    color: Color::LightBlue,
+                    symbol: '❄',
+                    frame_duration: 0.05,
+                });
+            }
+
+            // lingering frost embers
+            frames.push(AnimationFrame {
+                tiles: vec![(origin_x, origin_y)],
+                color: Color::White,
+                symbol: '.',
+                frame_duration: 0.04,
             });
         }
-
-        // 3. Frozen Ground (Lingers)
-        let mut frozen_area = vec![];
-        for dx in -reach..=reach {
-            for dy in -reach..=reach {
-                if dx.abs() + dy.abs() <= reach {
-                    frozen_area.push((origin_x + dx, origin_y + dy));
-                }
-            }
-        }
-        frames.push(AnimationFrame {
-            tiles: frozen_area,
-            color: Color::LightBlue,
-            symbol: '#',
-            frame_duration: 0.2, // Stays longer
-        });
 
         frames
     }
@@ -739,61 +747,76 @@ impl AttackPattern {
         reach: i32,
         width: i32,
     ) -> Vec<AnimationFrame> {
-        let mut frames = vec![];
+        // Staggered falling meteors with trails and wider impact splashes
+        let mut frames: Vec<AnimationFrame> = Vec::new();
 
-        let target_x = origin_x + dir_x * reach;
-        let target_y = origin_y + dir_y * reach;
-        let area_radius = width.max(2);
+        // simple circle helper for impacts
+        let circle = |cx: i32, cy: i32, r: i32| -> Vec<(i32, i32)> {
+            let mut tiles = Vec::new();
+            let r_sq = r * r;
+            for dx in -r..=r {
+                for dy in -r..=r {
+                    if dx * dx + dy * dy <= r_sq {
+                        tiles.push((cx + dx, cy + dy));
+                    }
+                }
+            }
+            tiles.sort();
+            tiles.dedup();
+            tiles
+        };
 
-        // Generate 3 random impact points around the target area
-        let impacts = vec![
-            (target_x, target_y),
-            (target_x + 1, target_y - 1),
-            (target_x - 1, target_y + 1),
-        ];
+        for distance in 1..=reach {
+            // stagger start offset so meteors arrive in waves
+            let stagger = (distance % 3) as i32;
 
-        for (ix, iy) in impacts {
-            // Falling phase (from "sky" - offset Y)
-            for h in (0..4).rev() {
+            // meteor start (a few tiles before impact)
+            let start_x = origin_x + dir_x * (distance - 3 - stagger);
+            let start_y = origin_y + dir_y * (distance - 3 - stagger);
+
+            // falling trail frames toward impact
+            for t in 0..3 {
+                let tpos_x = start_x + dir_x * t;
+                let tpos_y = start_y + dir_y * t;
                 frames.push(AnimationFrame {
-                    tiles: vec![(ix, iy - h)],
+                    tiles: vec![(tpos_x, tpos_y)],
                     color: Color::LightRed,
-                    symbol: '|',
+                    symbol: '/',
                     frame_duration: 0.03,
                 });
             }
 
-            // Impact
-            let mut splash = vec![];
-            splash.push((ix, iy));
-            splash.push((ix + 1, iy));
-            splash.push((ix - 1, iy));
-            splash.push((ix, iy + 1));
-            splash.push((ix, iy - 1));
+            let impact_x = origin_x + (dir_x * distance);
+            let impact_y = origin_y + (dir_y * distance);
 
+            // Impact core
             frames.push(AnimationFrame {
-                tiles: splash,
+                tiles: vec![(impact_x, impact_y)],
                 color: Color::Yellow,
-                symbol: '*', // BOOM
-                frame_duration: 0.06,
+                symbol: '✦',
+                frame_duration: 0.04,
+            });
+
+            // Splash: use width to determine radius (min 1)
+            let splash_radius = (width.max(1) / 2).max(1);
+            for r in 1..=splash_radius {
+                let tiles = circle(impact_x, impact_y, r);
+                frames.push(AnimationFrame {
+                    tiles,
+                    color: if r == 1 { Color::LightRed } else { Color::Red },
+                    symbol: '◆',
+                    frame_duration: 0.05 - (r as f32 * 0.004).min(0.02),
+                });
+            }
+
+            // Scattered embers
+            frames.push(AnimationFrame {
+                tiles: vec![(impact_x + 1, impact_y), (impact_x - 1, impact_y)],
+                color: Color::LightYellow,
+                symbol: '.',
+                frame_duration: 0.04,
             });
         }
-
-        // Final crater
-        let mut crater = vec![];
-        for dx in -area_radius..=area_radius {
-            for dy in -area_radius..=area_radius {
-                if dx * dx + dy * dy <= area_radius * area_radius {
-                    crater.push((target_x + dx, target_y + dy));
-                }
-            }
-        }
-        frames.push(AnimationFrame {
-            tiles: crater,
-            color: Color::DarkGray,
-            symbol: '.',
-            frame_duration: 0.15,
-        });
 
         frames
     }
@@ -807,97 +830,104 @@ impl AttackPattern {
         dir_x: i32,
         dir_y: i32,
     ) -> Vec<AnimationFrame> {
+        // Curved slash pattern
         let mut frames = vec![];
+        let mut tiles = vec![];
 
-        // Create a moon shape offset by direction
-        // If attacking Right (1,0): Draw curve )
-        // If attacking Left (-1,0): Draw curve (
-
-        let mut curve_tiles = vec![];
+        // Create a curved arc pattern based on direction
         if dir_x != 0 {
-            // Vertical arc
-            curve_tiles.push((origin_x + dir_x, origin_y - 1));
-            curve_tiles.push((origin_x + dir_x * 2, origin_y)); // Center furthest out
-            curve_tiles.push((origin_x + dir_x, origin_y + 1));
+            // Horizontal direction - vertical curve
+            tiles.push((origin_x + dir_x, origin_y));
+            tiles.push((origin_x + dir_x, origin_y + 1));
+            tiles.push((origin_x + dir_x, origin_y - 1));
+            tiles.push((origin_x + dir_x * 2, origin_y + 1));
+            tiles.push((origin_x + dir_x * 2, origin_y - 1));
         } else {
-            // Horizontal arc
-            curve_tiles.push((origin_x - 1, origin_y + dir_y));
-            curve_tiles.push((origin_x, origin_y + dir_y * 2));
-            curve_tiles.push((origin_x + 1, origin_y + dir_y));
+            // Vertical direction - horizontal curve
+            tiles.push((origin_x, origin_y + dir_y));
+            tiles.push((origin_x + 1, origin_y + dir_y));
+            tiles.push((origin_x - 1, origin_y + dir_y));
+            tiles.push((origin_x + 1, origin_y + dir_y * 2));
+            tiles.push((origin_x - 1, origin_y + dir_y * 2));
         }
 
-        // Frame 1: Flash color 1
+        tiles.sort();
+        tiles.dedup();
+
         frames.push(AnimationFrame {
-            tiles: curve_tiles.clone(),
+            tiles: tiles.clone(),
             color: Color::Magenta,
-            symbol: ')', // Placeholder, creates curve look
-            frame_duration: 0.06,
+            symbol: '(',
+            frame_duration: 0.1,
         });
 
-        // Frame 2: Flash color 2 (wider)
-        let mut wide_tiles = curve_tiles.clone();
-        if dir_x != 0 {
-            wide_tiles.push((origin_x + dir_x, origin_y));
-        } else {
-            wide_tiles.push((origin_x, origin_y + dir_y));
-        }
-
         frames.push(AnimationFrame {
-            tiles: wide_tiles,
-            color: Color::LightMagenta,
-            symbol: 'D',
-            frame_duration: 0.06,
+            tiles,
+            color: Color::White,
+            symbol: ')',
+            frame_duration: 0.1,
         });
 
         frames
     }
 
     fn vortex_animation(&self, origin_x: i32, origin_y: i32, radius: i32) -> Vec<AnimationFrame> {
-        let mut frames = vec![];
+        // Rotating spiral that pulls inward with an inner core pulse
+        let mut frames: Vec<AnimationFrame> = Vec::new();
 
-        // 3 pulses of sucking in
-        for _ in 0..3 {
-            // Outer ring
-            let mut outer = vec![];
-            for dx in -radius..=radius {
-                for dy in -radius..=radius {
-                    if dx * dx + dy * dy <= radius * radius
-                        && dx * dx + dy * dy > (radius - 2) * (radius - 2)
-                    {
-                        outer.push((origin_x + dx, origin_y + dy));
+        // Build spiral rings from outer to inner, but animate with rotation offsets
+        for ring in (1..=radius).rev() {
+            let mut tiles = Vec::new();
+
+            // perimeter points approx circle using distance range
+            for dx in -ring..=ring {
+                for dy in -ring..=ring {
+                    let dist_sq = dx * dx + dy * dy;
+                    if dist_sq <= ring * ring && dist_sq > (ring - 1) * (ring - 1) {
+                        tiles.push((origin_x + dx, origin_y + dy));
                     }
                 }
             }
+
+            // create a rotation offset based on ring to stagger appearance
+            let symbol = match ring % 3 {
+                0 => '○',
+                1 => '◐',
+                _ => '◓',
+            };
+
             frames.push(AnimationFrame {
-                tiles: outer,
+                tiles: tiles.clone(),
                 color: Color::Magenta,
-                symbol: '%',
-                frame_duration: 0.05,
+                symbol,
+                frame_duration: 0.05 + (radius - ring) as f32 * 0.01,
             });
 
-            // Middle ring
-            let mut mid = vec![];
-            for dx in -radius..=radius {
-                for dy in -radius..=radius {
-                    if dx * dx + dy * dy <= (radius - 2) * (radius - 2) {
-                        mid.push((origin_x + dx, origin_y + dy));
-                    }
+            // inward pull: small set of tiles closer to center
+            if ring > 1 {
+                let mut inner = Vec::new();
+                for dx in -(ring - 1)..=(ring - 1) {
+                    let dy = (ring - 1) - dx.abs();
+                    inner.push((origin_x + dx, origin_y + dy));
+                    inner.push((origin_x + dx, origin_y - dy));
                 }
+                inner.sort();
+                inner.dedup();
+                frames.push(AnimationFrame {
+                    tiles: inner,
+                    color: Color::LightRed,
+                    symbol: '.',
+                    frame_duration: 0.03,
+                });
             }
-            frames.push(AnimationFrame {
-                tiles: mid,
-                color: Color::DarkGray,
-                symbol: '@',
-                frame_duration: 0.05,
-            });
         }
 
-        // Singularity (Center pop)
+        // Core pulse
         frames.push(AnimationFrame {
             tiles: vec![(origin_x, origin_y)],
-            color: Color::Black,
-            symbol: 'Ø', // Void symbol
-            frame_duration: 0.1,
+            color: Color::Magenta,
+            symbol: '@',
+            frame_duration: 0.12,
         });
 
         frames

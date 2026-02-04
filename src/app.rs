@@ -305,8 +305,6 @@ impl App {
     }
 
     pub fn move_character(&mut self, dx: i32, dy: i32) {
-        use std::io::Write;
-
         self.movement_tick_counter += 1;
 
         let speed_adjusted_requirement = (crate::constants::PLAYER_MOVEMENT_TICKS_REQUIRED as f32
@@ -747,8 +745,8 @@ impl App {
                 }
             }
 
-            let walkable_tiles: std::collections::HashSet<(i32, i32)> = (0..floor.width as i32)
-                .flat_map(|x| (0..floor.height as i32).map(move |y| (x, y)))
+            let walkable_tiles: std::collections::HashSet<(i32, i32)> = (0..floor.width)
+                .flat_map(|x| (0..floor.height).map(move |y| (x, y)))
                 .filter(|(x, y)| floor.is_walkable(*x, *y))
                 .collect();
 

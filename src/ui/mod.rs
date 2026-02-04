@@ -244,7 +244,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
                 bar_chunks[0],
                 "DASH",
                 remaining_dash_cooldown,
-                app.character.dash_cooldown_duration,
+                app.character.dash_cooldown.duration(),
                 Color::Magenta,
             );
 
@@ -255,7 +255,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
                 bar_chunks[1],
                 "ATK",
                 remaining_attack_cooldown,
-                app.character.attack_cooldown_duration,
+                app.character.attack_cooldown.duration(),
                 Color::Red,
             );
 
@@ -266,7 +266,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
                 bar_chunks[2],
                 "BOW",
                 remaining_bow_cooldown,
-                app.character.bow_cooldown_duration,
+                app.character.bow_cooldown.duration(),
                 Color::Cyan,
             );
 
@@ -277,7 +277,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
                 bar_chunks[3],
                 "BLOCK",
                 remaining_block_cooldown,
-                app.character.block_cooldown_duration,
+                app.character.block_cooldown.duration(),
                 Color::Blue,
             );
 

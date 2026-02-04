@@ -1,4 +1,6 @@
+use crate::constants::*;
 use crate::model::consumable::ConsumableInventory;
+use crate::model::cooldown::Cooldown;
 use crate::model::status_effect::StatusEffectManager;
 use crate::model::ultimate::Ultimate;
 use crate::model::weapon::WeaponInventory;
@@ -12,9 +14,7 @@ pub struct Character {
 
     pub last_direction: (i32, i32),
 
-    pub dash_cooldown_start: Option<Instant>,
-
-    pub dash_cooldown_duration: f32,
+    pub dash_cooldown: Cooldown,
 
     pub dash_distance: i32,
 
@@ -27,18 +27,15 @@ pub struct Character {
     pub attack_length: i32, // How many blocks forward
     pub attack_width: i32,  // Width of attack area
 
-    pub attack_cooldown_start: Option<Instant>,
-    pub attack_cooldown_duration: f32,
+    pub attack_cooldown: Cooldown,
     pub last_attack_time: Option<Instant>, // Track attack animation
 
     // Bow stats
     pub arrow_speed: f32, // Tiles per second
-    pub bow_cooldown_start: Option<Instant>,
-    pub bow_cooldown_duration: f32,
+    pub bow_cooldown: Cooldown,
 
     // Block stats
-    pub block_cooldown_start: Option<Instant>,
-    pub block_cooldown_duration: f32,
+    pub block_cooldown: Cooldown,
 
     // Weapon system
     pub weapon_inventory: WeaponInventory,
@@ -66,25 +63,21 @@ pub struct Character {
 impl Default for Character {
     fn default() -> Self {
         Self {
-            speed: 5.0,
+            speed: PLAYER_BASE_SPEED,
             name: "Unnamed Hero".to_string(),
             last_direction: (0, 0),
-            dash_cooldown_start: None,
-            dash_cooldown_duration: 5.0,
-            dash_distance: 5,
-            health: 100,
-            health_max: 100,
-            attack_damage: 5,
-            attack_length: 2,
-            attack_width: 1,
-            attack_cooldown_start: None,
-            attack_cooldown_duration: 0.5, // Fast attack cooldown
+            dash_cooldown: Cooldown::new(PLAYER_DASH_COOLDOWN),
+            dash_distance: PLAYER_DASH_DISTANCE,
+            health: PLAYER_BASE_HEALTH,
+            health_max: PLAYER_BASE_HEALTH,
+            attack_damage: PLAYER_BASE_DAMAGE,
+            attack_length: PLAYER_ATTACK_LENGTH,
+            attack_width: PLAYER_ATTACK_WIDTH,
+            attack_cooldown: Cooldown::new(PLAYER_ATTACK_COOLDOWN),
             last_attack_time: None,
-            arrow_speed: 8.0, // Tiles per second
-            bow_cooldown_start: None,
-            bow_cooldown_duration: 0.3, // Fast bow cooldown
-            block_cooldown_start: None,
-            block_cooldown_duration: 6.0, // 6 second block cooldown
+            arrow_speed: PLAYER_ARROW_SPEED,
+            bow_cooldown: Cooldown::new(PLAYER_BOW_COOLDOWN),
+            block_cooldown: Cooldown::new(PLAYER_BLOCK_COOLDOWN),
             weapon_inventory: WeaponInventory::default(),
             consumable_inventory: ConsumableInventory::default(),
             status_effects: StatusEffectManager::default(),
@@ -106,24 +99,15 @@ impl Character {
     }
 
     pub fn can_dash(&self) -> bool {
-        match self.dash_cooldown_start {
-            None => true,
-            Some(start_time) => start_time.elapsed().as_secs_f32() >= self.dash_cooldown_duration,
-        }
+        self.dash_cooldown.is_ready()
     }
 
     pub fn dash_cooldown_remaining(&self) -> f32 {
-        match self.dash_cooldown_start {
-            None => 0.0,
-            Some(start_time) => {
-                let elapsed = start_time.elapsed().as_secs_f32();
-                (self.dash_cooldown_duration - elapsed).max(0.0)
-            }
-        }
+        self.dash_cooldown.remaining_seconds()
     }
 
     pub fn start_dash_cooldown(&mut self) {
-        self.dash_cooldown_start = Some(Instant::now());
+        self.dash_cooldown.trigger();
     }
 
     pub fn update_direction(&mut self, dx: i32, dy: i32) {
@@ -133,76 +117,50 @@ impl Character {
     }
 
     pub fn can_attack(&self) -> bool {
-        match self.attack_cooldown_start {
-            None => true,
-            Some(start_time) => start_time.elapsed().as_secs_f32() >= self.attack_cooldown_duration,
-        }
+        self.attack_cooldown.is_ready()
     }
 
     #[allow(dead_code)]
     pub fn attack_cooldown_remaining(&self) -> f32 {
-        match self.attack_cooldown_start {
-            None => 0.0,
-            Some(start_time) => {
-                let elapsed = start_time.elapsed().as_secs_f32();
-                (self.attack_cooldown_duration - elapsed).max(0.0)
-            }
-        }
+        self.attack_cooldown.remaining_seconds()
     }
 
     pub fn start_attack_cooldown(&mut self) {
-        self.attack_cooldown_start = Some(Instant::now());
+        self.attack_cooldown.trigger();
         self.last_attack_time = Some(Instant::now());
     }
 
     #[allow(dead_code)]
     pub fn is_attack_animating(&self) -> bool {
         if let Some(attack_time) = self.last_attack_time {
-            attack_time.elapsed().as_secs_f32() < 0.2 // 200ms animation
+            attack_time.elapsed().as_secs_f32() < PLAYER_ATTACK_ANIMATION_TIME
         } else {
             false
         }
     }
+
     pub fn can_shoot(&self) -> bool {
-        match self.bow_cooldown_start {
-            None => true,
-            Some(start_time) => start_time.elapsed().as_secs_f32() >= self.bow_cooldown_duration,
-        }
+        self.bow_cooldown.is_ready()
     }
 
     pub fn start_bow_cooldown(&mut self) {
-        self.bow_cooldown_start = Some(Instant::now());
+        self.bow_cooldown.trigger();
     }
 
     pub fn can_block(&self) -> bool {
-        match self.block_cooldown_start {
-            None => true,
-            Some(start_time) => start_time.elapsed().as_secs_f32() >= self.block_cooldown_duration,
-        }
+        self.block_cooldown.is_ready()
     }
 
     pub fn block_cooldown_remaining(&self) -> f32 {
-        match self.block_cooldown_start {
-            None => 0.0,
-            Some(start_time) => {
-                let elapsed = start_time.elapsed().as_secs_f32();
-                (self.block_cooldown_duration - elapsed).max(0.0)
-            }
-        }
+        self.block_cooldown.remaining_seconds()
     }
 
     pub fn start_block_cooldown(&mut self) {
-        self.block_cooldown_start = Some(Instant::now());
+        self.block_cooldown.trigger();
     }
 
     pub fn bow_cooldown_remaining(&self) -> f32 {
-        match self.bow_cooldown_start {
-            None => 0.0,
-            Some(start_time) => {
-                let elapsed = start_time.elapsed().as_secs_f32();
-                (self.bow_cooldown_duration - elapsed).max(0.0)
-            }
-        }
+        self.bow_cooldown.remaining_seconds()
     }
 
     pub fn heal(&mut self, amount: i32) {
@@ -220,7 +178,7 @@ impl Character {
 
     pub fn is_damaged_animating(&self) -> bool {
         if let Some(damaged_at) = self.damaged_at {
-            damaged_at.elapsed().as_secs_f32() < 1.0
+            damaged_at.elapsed().as_secs_f32() < PLAYER_DAMAGE_ANIMATION_TIME
         } else {
             false
         }

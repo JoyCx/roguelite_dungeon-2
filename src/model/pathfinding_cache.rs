@@ -1,5 +1,9 @@
-use std::collections::HashMap;
 use crate::model::enemy::Position;
+use std::collections::HashMap;
+
+// Type alias to reduce complexity of HashMap key/value types
+type CacheKey = (i32, i32, i32, i32);
+type CacheValue = Option<(i32, i32)>;
 
 /// Simple pathfinding cache to avoid recalculating paths
 /// Caches the next step in a path for each (from, to) pair
@@ -7,7 +11,7 @@ use crate::model::enemy::Position;
 pub struct PathfindingCache {
     // Cache key: (from_x, from_y, to_x, to_y)
     // Value: next position in optimal path
-    cache: HashMap<(i32, i32, i32, i32), Option<(i32, i32)>>,
+    cache: HashMap<CacheKey, CacheValue>,
     max_size: usize,
 }
 
@@ -48,6 +52,7 @@ impl PathfindingCache {
 }
 
 #[derive(Clone, Debug)]
+#[allow(dead_code)] // May be used in future debugging/optimization features
 pub struct CacheStats {
     pub entries: usize,
     pub max_size: usize,

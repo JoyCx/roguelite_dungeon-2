@@ -54,6 +54,7 @@ impl Weapon {
         }
     }
 
+    #[allow(dead_code)] // May be used in future weapon variants
     pub fn new_mace() -> Self {
         Self {
             weapon_type: WeaponType::Mace,
@@ -65,6 +66,7 @@ impl Weapon {
         }
     }
 
+    #[allow(dead_code)] // Utility method for calculating weapon damage with enchants
     pub fn get_total_damage(&self) -> i32 {
         let mut total = self.damage;
         for enchant in &self.enchants {
@@ -75,6 +77,7 @@ impl Weapon {
         total
     }
 
+    #[allow(dead_code)] // Utility method for calculating radius bonuses
     pub fn get_radius_bonus(&self) -> i32 {
         let mut bonus = 0;
         for enchant in &self.enchants {
@@ -85,6 +88,7 @@ impl Weapon {
         bonus
     }
 
+    #[allow(dead_code)] // Will be used when enchantments are applied
     pub fn add_enchant(&mut self, enchant: Enchant) {
         self.enchants.push(enchant);
     }
@@ -133,7 +137,7 @@ impl WeaponInventory {
         if slot < self.weapons.len() {
             let weapon = self.weapons.remove(slot);
             // Adjust current index if needed
-            if self.current_weapon_index >= self.weapons.len() && self.weapons.len() > 0 {
+            if self.current_weapon_index >= self.weapons.len() && !self.weapons.is_empty() {
                 self.current_weapon_index = self.weapons.len() - 1;
             }
             Some(weapon)

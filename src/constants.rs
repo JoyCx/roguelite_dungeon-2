@@ -48,6 +48,16 @@ pub const CAMERA_SMOOTH_FACTOR: f32 = 0.1;
 // UI
 pub const HEALTH_BAR_WIDTH: u16 = 20;
 pub const INVENTORY_MAX_ITEMS: usize = 5;
+
+// Player character defaults
+pub const PLAYER_BASE_HEALTH: i32 = 100;
+pub const PLAYER_BASE_SPEED: f32 = 5.0;
+pub const PLAYER_DASH_DISTANCE: i32 = 5;
+pub const PLAYER_ATTACK_LENGTH: i32 = 2; // How many blocks forward
+pub const PLAYER_ATTACK_WIDTH: i32 = 1; // Width of attack area
+pub const PLAYER_ARROW_SPEED: f32 = 8.0; // Tiles per second
+pub const PLAYER_ATTACK_ANIMATION_TIME: f32 = 0.2; // 200ms animation
+pub const PLAYER_DAMAGE_ANIMATION_TIME: f32 = 1.0; // 1 second damage flash
 pub const COOLDOWN_BAR_HEIGHT: u16 = 3;
 
 // Colors (for consistency)

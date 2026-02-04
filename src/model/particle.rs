@@ -28,9 +28,7 @@ impl Particle {
 
     pub fn get_alpha(&self) -> f32 {
         let elapsed = self.created_at.elapsed().as_secs_f32();
-        ((self.lifetime - elapsed) / self.lifetime)
-            .max(0.0)
-            .min(1.0)
+        ((self.lifetime - elapsed) / self.lifetime).clamp(0.0, 1.0)
     }
 }
 
@@ -46,6 +44,7 @@ impl ParticleSystem {
         }
     }
 
+    #[allow(dead_code)] // Part of particle emission API
     pub fn emit(&mut self, particle: Particle) {
         self.particles.push(particle);
     }
@@ -54,6 +53,7 @@ impl ParticleSystem {
         self.particles.retain(|p| p.is_alive());
     }
 
+    #[allow(dead_code)] // Will be used when critical hits are displayed
     pub fn emit_crit(&mut self, x: f32, y: f32) {
         // Create upward-flying crit indicators
         for offset in -1..=1 {
@@ -68,6 +68,7 @@ impl ParticleSystem {
         }
     }
 
+    #[allow(dead_code)] // Will be used when healing occurs
     pub fn emit_heal(&mut self, x: f32, y: f32) {
         // Create healing indicators
         for i in 0..3 {
@@ -84,7 +85,7 @@ impl ParticleSystem {
 
     pub fn emit_glint(&mut self, x: f32, y: f32, color: ratatui::prelude::Color) {
         // Create a sparkle/glint effect
-        let glyphs = vec!['*', '✦', '✧'];
+        let glyphs = &['*', '✦', '✧'];
         for i in 0..2 {
             let angle = (i as f32 / 2.0) * std::f32::consts::TAU;
             let dx = angle.cos() * 0.3;

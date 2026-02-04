@@ -3,6 +3,7 @@ use std::collections::HashMap;
 /// Simple spatial hash grid for efficient collision detection
 /// Divides space into cells for faster proximity queries
 #[derive(Clone, Debug)]
+#[allow(dead_code)] // Used in tests, may be useful for future optimizations
 pub struct SpatialHash {
     cell_size: i32,
     grid: HashMap<(i32, i32), Vec<(i32, i32)>>, // Map of cell coordinates to entity positions
@@ -24,13 +25,12 @@ impl SpatialHash {
     /// Insert an entity at the given position
     pub fn insert(&mut self, x: i32, y: i32) {
         let cell = self.get_cell(x, y);
-        self.grid.entry(cell).or_insert_with(Vec::new).push((x, y));
+        self.grid.entry(cell).or_default().push((x, y));
     }
 
     /// Get all entities in the given radius around a position
     pub fn query_radius(&self, cx: i32, cy: i32, radius: i32) -> Vec<(i32, i32)> {
         let mut results = Vec::new();
-        let cell_range = (radius + self.cell_size - 1) / self.cell_size;
 
         let min_cell = self.get_cell(cx - radius, cy - radius);
         let max_cell = self.get_cell(cx + radius, cy + radius);

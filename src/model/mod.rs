@@ -3,6 +3,7 @@ pub mod attack_pattern;
 pub mod character;
 pub mod collision;
 pub mod consumable;
+pub mod cooldown;
 pub mod damage_calculator;
 pub mod enemy;
 pub mod enemy_type;

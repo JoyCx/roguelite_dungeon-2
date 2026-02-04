@@ -475,6 +475,7 @@ impl Floor {
             .collect()
     }
 
+    #[allow(dead_code)] // Part of public floor API, may be used for item manipulation
     pub fn items_at_mut(&mut self, x: i32, y: i32) -> Vec<&mut ItemDrop> {
         self.items
             .iter_mut()
@@ -509,9 +510,9 @@ impl Floor {
         for (x, y) in adjacent {
             // Check if position is walkable and empty
             if x >= 0
-                && x < self.width as i32
+                && x < self.width
                 && y >= 0
-                && y < self.height as i32
+                && y < self.height
                 && self.is_walkable(x, y)
                 && !self.item_exists_at(x, y)
                 && !self.enemy_exists_at(x, y)
@@ -604,8 +605,8 @@ impl Floor {
 
             // Spawn in a random location within the largest region
             if !region_tiles.is_empty() {
-                let mut rng = rand::thread_rng();
-                let idx = rng.gen_range(0..region_tiles.len());
+                let mut rng = rand::rng();
+                let idx = rng.random_range(0..region_tiles.len());
                 return Some(region_tiles[idx]);
             }
         }
