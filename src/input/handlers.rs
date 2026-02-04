@@ -209,6 +209,8 @@ pub fn handle_game_input(app: &mut App, key: crossterm::event::KeyEvent) {
                 app.inventory_focused = true;
             } else if key.code == KeyCode::Char('f') || key.code == KeyCode::Char('F') {
                 app.block();
+            } else if key.code == KeyCode::Char('x') || key.code == KeyCode::Char('X') {
+                app.drop_item();
             }
         }
     }

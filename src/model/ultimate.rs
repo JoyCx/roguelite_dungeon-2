@@ -69,15 +69,6 @@ impl Ultimate {
     }
 
     #[allow(dead_code)]
-    pub fn cooldown_remaining(&self) -> f32 {
-        match self.cooldown_start {
-            None => 0.0,
-            Some(start_time) => {
-                let elapsed = start_time.elapsed().as_secs_f32();
-                (self.cooldown_duration - elapsed).max(0.0)
-            }
-        }
-    }
 
     pub fn get_affected_area(&self, player_x: i32, player_y: i32) -> Vec<(i32, i32)> {
         let mut area = Vec::new();

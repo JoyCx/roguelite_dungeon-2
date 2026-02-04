@@ -1,12 +1,12 @@
 use crate::constants::GAME_TICK_RATE_MS;
 use crate::model::arrow::Arrow;
+use crate::model::attack_pattern::{AnimationFrame, AttackPattern};
 use crate::model::character::Character;
 use crate::model::floor::Floor;
 use crate::model::gamesave::{GameSave, PlayerStats};
 use crate::model::particle::ParticleSystem;
 use crate::model::pathfinding_cache::PathfindingCache;
 use crate::model::settings::Settings;
-use ratatui::prelude::Color;
 use ratatui::widgets::ListState;
 use std::time::Instant;
 
@@ -22,6 +22,15 @@ pub enum AppState {
 pub enum SettingsMode {
     Navigating,
     Rebinding,
+}
+
+pub struct ActiveAnimation {
+    pub pattern: AttackPattern,
+    pub origin: (i32, i32),
+    pub direction: (i32, i32),
+    pub current_frame: usize,
+    pub frame_timer: f32,
+    pub frames: Vec<AnimationFrame>,
 }
 
 pub struct App {
@@ -56,10 +65,20 @@ pub struct App {
     pub particle_system: ParticleSystem,
     pub pathfinding_cache: PathfindingCache,
     pub movement_tick_counter: u32, // Counter to track movement cooldown
+    pub active_animations: Vec<ActiveAnimation>,
     // Character creation state
     pub char_name: String,
     pub char_name_input_mode: bool,
     pub char_creation_selection: usize, // 0 = name field, 1 = difficulty, 2 = start button
+}
+
+fn log_event(msg: &str) {
+    use std::io::Write;
+    let _ = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open("log.txt")
+        .and_then(|mut f| f.write_all(msg.as_bytes()));
 }
 
 impl App {
@@ -107,6 +126,7 @@ impl App {
             char_name_input_mode: false,
             char_creation_selection: 0,
             movement_tick_counter: 0,
+            active_animations: Vec::new(),
         }
     }
 
@@ -167,6 +187,22 @@ impl App {
         }
     }
 
+    pub fn trigger_animation(&mut self, pattern: AttackPattern, origin: (i32, i32), direction: (i32, i32)) {
+        let (dir_x, dir_y) = if direction == (0, 0) { (0, 1) } else { direction };
+        let frames = pattern.get_animation_frames(origin.0, origin.1, dir_x, dir_y);
+
+        if !frames.is_empty() {
+            self.active_animations.push(ActiveAnimation {
+                pattern,
+                origin,
+                direction: (dir_x, dir_y),
+                current_frame: 0,
+                frame_timer: frames[0].frame_duration,
+                frames,
+            });
+        }
+    }
+
     pub fn roll_random_seed(&mut self) {
         use rand::Rng;
         let new_seed: u64 = rand::rng().random_range(0..=u64::MAX);
@@ -195,8 +231,6 @@ impl App {
     }
 
     pub fn move_character(&mut self, dx: i32, dy: i32) {
-        use std::io::Write;
-
         // Increment movement counter
         self.movement_tick_counter += 1;
 
@@ -214,18 +248,10 @@ impl App {
             "\n=== MOVE ATTEMPT ===\nCurrent pos: ({}, {})\nTarget pos: ({}, {})\n",
             self.character_position.0, self.character_position.1, new_x, new_y
         );
-        let _ = std::fs::OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open("log.txt")
-            .and_then(|mut f| f.write_all(msg.as_bytes()));
+        log_event(&msg);
 
         if self.is_walkable(new_x, new_y) {
-            let _ = std::fs::OpenOptions::new()
-                .create(true)
-                .append(true)
-                .open("log.txt")
-                .and_then(|mut f| f.write_all(b"MOVE SUCCESSFUL\n"));
+            log_event("MOVE SUCCESSFUL\n");
 
             self.character_position = (new_x, new_y);
             self.character.update_direction(dx, dy);
@@ -233,17 +259,11 @@ impl App {
             self.update_camera();
             self.consume_tick();
         } else {
-            let _ = std::fs::OpenOptions::new()
-                .create(true)
-                .append(true)
-                .open("log.txt")
-                .and_then(|mut f| f.write_all(b"MOVE BLOCKED\n"));
+            log_event("MOVE BLOCKED\n");
         }
     }
 
     pub fn dash(&mut self) {
-        use std::io::Write;
-
         if !self.character.can_dash() || !self.should_tick() {
             return;
         }
@@ -262,35 +282,21 @@ impl App {
             "\n=== DASH ATTEMPT ===\nCurrent pos: ({}, {})\nDash dir: ({}, {})\nTarget pos: ({}, {})\n",
             self.character_position.0, self.character_position.1, dx, dy, new_x, new_y
         );
-        let _ = std::fs::OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open("log.txt")
-            .and_then(|mut f| f.write_all(msg.as_bytes()));
+        log_event(&msg);
 
         if self.is_walkable(new_x, new_y) {
-            let _ = std::fs::OpenOptions::new()
-                .create(true)
-                .append(true)
-                .open("log.txt")
-                .and_then(|mut f| f.write_all(b"DASH SUCCESSFUL\n"));
+            log_event("DASH SUCCESSFUL\n");
 
             self.character_position = (new_x, new_y);
             self.character.start_dash_cooldown();
             self.update_camera();
             self.consume_tick();
         } else {
-            let _ = std::fs::OpenOptions::new()
-                .create(true)
-                .append(true)
-                .open("log.txt")
-                .and_then(|mut f| f.write_all(b"DASH BLOCKED BY WALL\n"));
+            log_event("DASH BLOCKED BY WALL\n");
         }
     }
 
     pub fn attack(&mut self) {
-        use std::io::Write;
-
         if !self.character.can_attack() || !self.should_tick() {
             return;
         }
@@ -318,18 +324,19 @@ impl App {
             length,
             width
         );
-        let _ = std::fs::OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open("log.txt")
-            .and_then(|mut f| f.write_all(msg.as_bytes()));
+        log_event(&msg);
+
+        // Trigger visual animation
+        if let Some(weapon) = self.character.weapon_inventory.get_current_weapon() {
+            let pattern = weapon.attack_pattern.clone();
+            self.trigger_animation(pattern, self.character_position, (attack_dx, attack_dy));
+        }
 
         // Start the attack animation and cooldown
         self.character.start_attack_cooldown();
         self.consume_tick();
     }
 
-    #[allow(dead_code)]
     pub fn get_attack_area(&self) -> Vec<(i32, i32)> {
         if let Some(weapon) = self.character.weapon_inventory.get_current_weapon() {
             let (dx, dy) = self.character.last_direction;
@@ -344,8 +351,6 @@ impl App {
     }
 
     pub fn shoot(&mut self) {
-        use std::io::Write;
-
         if !self.character.can_shoot() || !self.should_tick() {
             return;
         }
@@ -366,6 +371,13 @@ impl App {
         );
 
         self.arrows.push(arrow);
+
+        // Trigger visual animation
+        if let Some(weapon) = self.character.weapon_inventory.get_current_weapon() {
+            let pattern = weapon.attack_pattern.clone();
+            self.trigger_animation(pattern, self.character_position, (shoot_dx, shoot_dy));
+        }
+
         self.character.start_bow_cooldown();
         self.consume_tick();
 
@@ -377,11 +389,7 @@ impl App {
             shoot_dy,
             self.character.arrow_speed
         );
-        let _ = std::fs::OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open("log.txt")
-            .and_then(|mut f| f.write_all(msg.as_bytes()));
+        log_event(&msg);
     }
 
     pub fn update_arrows(&mut self) {
@@ -413,11 +421,12 @@ impl App {
     }
 
     pub fn use_ultimate(&mut self) {
-        use std::io::Write;
-
         if !self.character.ultimate.can_use() || !self.should_tick() {
             return;
         }
+
+        let radius = self.character.ultimate.radius;
+        self.trigger_animation(AttackPattern::Fireball(radius), self.character_position, (0, 0));
 
         self.character.ultimate.start_animation();
         self.character.ultimate.start_cooldown();
@@ -425,13 +434,9 @@ impl App {
 
         let msg = format!(
             "\n=== ULTIMATE ABILITY ===\nPosition: ({}, {})\nRadius: {}\n",
-            self.character_position.0, self.character_position.1, self.character.ultimate.radius
+            self.character_position.0, self.character_position.1, radius
         );
-        let _ = std::fs::OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open("log.txt")
-            .and_then(|mut f| f.write_all(msg.as_bytes()));
+        log_event(&msg);
     }
 
     pub fn get_ultimate_area(&self) -> Vec<(i32, i32)> {
@@ -448,16 +453,11 @@ impl App {
         self.character.start_block_cooldown();
         self.consume_tick();
 
-        use std::io::Write;
         let msg = format!(
             "\n=== BLOCK ===\nPosition: ({}, {})\n",
             self.character_position.0, self.character_position.1
         );
-        let _ = std::fs::OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open("log.txt")
-            .and_then(|mut f| f.write_all(msg.as_bytes()));
+        log_event(&msg);
     }
 
     pub fn switch_weapon(&mut self, slot: usize) {
@@ -481,24 +481,99 @@ impl App {
         }
     }
 
+    pub fn drop_item(&mut self) {
+        let (char_x, char_y) = self.character_position;
+
+        // Find adjacent empty space
+        let mut drop_pos = None;
+        if let Some(floor) = &self.current_floor {
+            for dx in -1..=1 {
+                for dy in -1..=1 {
+                    if dx == 0 && dy == 0 { continue; }
+                    let nx = char_x + dx;
+                    let ny = char_y + dy;
+                    if floor.is_walkable(nx, ny) && !floor.item_exists_at(nx, ny) && !floor.enemy_exists_at(nx, ny) {
+                        drop_pos = Some((nx, ny));
+                        break;
+                    }
+                }
+                if drop_pos.is_some() { break; }
+            }
+        }
+
+        let (nx, ny) = match drop_pos {
+            Some(pos) => pos,
+            None => {
+                log_event("No space to drop item!\n");
+                return;
+            }
+        };
+
+        if self.inventory_focused {
+            // Drop selected consumable
+            if let Some(consumable) = self.character.consumable_inventory.remove_at(self.inventory_scroll_index) {
+                if let Some(floor) = &mut self.current_floor {
+                    let item = crate::model::item::ItemDrop::consumable(consumable, nx, ny);
+                    floor.add_item(item);
+                    log_event("Dropped consumable\n");
+                }
+            }
+        } else {
+            // Drop current weapon (if more than 1 weapon)
+            if self.character.weapon_inventory.weapons.len() > 1 {
+                let current_idx = self.character.weapon_inventory.current_weapon_index;
+                let weapon = self.character.weapon_inventory.weapons.remove(current_idx);
+                // Adjust index if necessary
+                if self.character.weapon_inventory.current_weapon_index >= self.character.weapon_inventory.weapons.len() {
+                    self.character.weapon_inventory.current_weapon_index = self.character.weapon_inventory.weapons.len().saturating_sub(1);
+                }
+
+                if let Some(floor) = &mut self.current_floor {
+                    let item = crate::model::item::ItemDrop::weapon(weapon, nx, ny, crate::model::item_tier::ItemTier::Common);
+                    floor.add_item(item);
+                    log_event("Dropped weapon\n");
+                }
+            } else {
+                log_event("Cannot drop your last weapon!\n");
+            }
+        }
+    }
+
     pub fn pickup_items(&mut self) {
         if let Some(floor) = &mut self.current_floor {
             let (char_x, char_y) = self.character_position;
-            let item_count = floor.items_at(char_x, char_y).len();
 
-            for _ in 0..item_count {
-                if let Some(item) = floor.pickup_item(char_x, char_y) {
-                    // Match on the item type and add to inventory
-                    use crate::model::item::ItemDropType;
-                    match item.item_type {
-                        ItemDropType::Consumable(consumable) => {
-                            self.character.consumable_inventory.add(consumable);
-                        }
-                        ItemDropType::Gold(amount) => {
-                            self.character.add_gold(amount);
+            let mut items_to_keep = Vec::new();
+            let items_at_pos = floor.pickup_all_at(char_x, char_y);
+
+            for item in items_at_pos {
+                use crate::model::item::ItemDropType;
+                match item.item_type {
+                    ItemDropType::Consumable(consumable) => {
+                        self.character.consumable_inventory.add(consumable);
+                    }
+                    ItemDropType::Gold(amount) => {
+                        self.character.add_gold(amount);
+                    }
+                    ItemDropType::Weapon(weapon) => {
+                        if self.character.weapon_inventory.weapons.len() < 9 {
+                            self.character.weapon_inventory.add_weapon(weapon);
+                        } else {
+                            // Inventory full, put it back on the ground
+                            items_to_keep.push(crate::model::item::ItemDrop {
+                                item_type: ItemDropType::Weapon(weapon),
+                                x: char_x,
+                                y: char_y,
+                                ..item
+                            });
+                            log_event("Weapon inventory full!\n");
                         }
                     }
                 }
+            }
+
+            for item in items_to_keep {
+                floor.add_item(item);
             }
         }
     }
@@ -597,6 +672,26 @@ impl App {
         let delta = (self.game_tick_rate_ms as f32) / 1000.0;
         self.character.status_effects.update(delta);
 
+        // Update damage animation timers
+        self.character.damaged_timer = (self.character.damaged_timer - delta).max(0.0);
+
+        // Update active animations
+        let mut finished_animations = Vec::new();
+        for (idx, anim) in self.active_animations.iter_mut().enumerate() {
+            anim.frame_timer -= delta;
+            if anim.frame_timer <= 0.0 {
+                anim.current_frame += 1;
+                if anim.current_frame >= anim.frames.len() {
+                    finished_animations.push(idx);
+                } else {
+                    anim.frame_timer = anim.frames[anim.current_frame].frame_duration;
+                }
+            }
+        }
+        for idx in finished_animations.into_iter().rev() {
+            self.active_animations.remove(idx);
+        }
+
         // Apply status effect damage
         let damage = (self.character.status_effects.get_total_damage_per_sec() * delta) as i32;
         if damage > 0 {
@@ -611,6 +706,7 @@ impl App {
         let player_attack_area = self.get_attack_area();
         let mut attacks_on_player: Vec<i32> = Vec::new();
         let mut hit_enemy_indices: Vec<usize> = Vec::new();
+        let mut enemy_animations: Vec<(AttackPattern, (i32, i32), (i32, i32))> = Vec::new();
 
         // Update floor items and enemies
         if let Some(floor) = &mut self.current_floor {
@@ -628,6 +724,8 @@ impl App {
                     continue;
                 }
 
+                enemy.damaged_timer = (enemy.damaged_timer - delta).max(0.0);
+
                 // Increment movement counter
                 enemy.movement_ticks += 1.0;
                 // Increment attack counter
@@ -635,14 +733,17 @@ impl App {
 
                 // Simple movement: move toward player if far enough and enough ticks have passed
                 let distance = enemy.position.distance_to(&player_pos);
+                let detection_radius = enemy.get_detection_radius(&self.settings.difficulty);
+
+                let dx = (player_pos.x - enemy.position.x).signum();
+                let dy = (player_pos.y - enemy.position.y).signum();
+
                 if distance > 1
+                    && distance <= detection_radius
                     && enemy.movement_ticks
                         >= crate::constants::ENEMY_MOVEMENT_TICKS_REQUIRED as f32
                 {
                     enemy.movement_ticks = 0.0;
-                    // Move one step closer to player
-                    let dx = (player_pos.x - enemy.position.x).signum();
-                    let dy = (player_pos.y - enemy.position.y).signum();
 
                     let new_x = enemy.position.x + dx;
                     let new_y = enemy.position.y + dy;
@@ -681,6 +782,13 @@ impl App {
                         crate::model::enemy_type::EnemyRarity::Boss => 20,
                     };
                     attacks_on_player.push(rarity_damage);
+
+                    // Trigger enemy attack animation
+                    enemy_animations.push((
+                        enemy.attack_pattern.clone(),
+                        (enemy.position.x, enemy.position.y),
+                        (dx, dy),
+                    ));
                 }
 
                 // Check if player's attack hitbox overlaps this enemy
@@ -694,14 +802,6 @@ impl App {
                 if idx < floor.enemies.len() {
                     let damage = self.character.attack_damage;
                     floor.enemies[idx].take_damage(damage);
-
-                    // Emit particle effect at enemy position
-                    self.particle_system.emit_impact(
-                        floor.enemies[idx].position.x as f32,
-                        floor.enemies[idx].position.y as f32,
-                        2,
-                        Color::Yellow,
-                    );
                 }
             }
 
@@ -709,15 +809,14 @@ impl App {
             floor.enemies.retain(|e| e.is_alive());
         }
 
+        // Trigger enemy animations outside of floor borrow
+        for (pattern, origin, direction) in enemy_animations {
+            self.trigger_animation(pattern, origin, direction);
+        }
+
         // Apply damage outside of borrow
         for attack_damage in attacks_on_player {
             self.character.take_damage(attack_damage);
-            self.particle_system.emit_impact(
-                self.character_position.0 as f32,
-                self.character_position.1 as f32,
-                2,
-                Color::Red,
-            );
         }
 
         // Update particles

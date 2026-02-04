@@ -106,6 +106,21 @@ impl ConsumableInventory {
         self.items.push(consumable);
     }
 
+    pub fn remove_at(&mut self, index: usize) -> Option<Consumable> {
+        if index < self.items.len() {
+            let mut item = self.items[index].clone();
+            if self.items[index].quantity > 1 {
+                self.items[index].quantity -= 1;
+                item.quantity = 1;
+                Some(item)
+            } else {
+                Some(self.items.remove(index))
+            }
+        } else {
+            None
+        }
+    }
+
     pub fn use_item(&mut self, index: usize) -> Option<Consumable> {
         if index < self.items.len() {
             self.items[index].quantity -= 1;
