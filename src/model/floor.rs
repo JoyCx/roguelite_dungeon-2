@@ -1,4 +1,5 @@
 use crate::model::item::ItemDrop;
+use rand::rngs::SmallRng;
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
 use ratatui::style::{Color, Style};
@@ -244,7 +245,21 @@ impl Floor {
         }
 
         let tile_val = self.get_tile(x, y);
-        !tile_val
+        if tile_val {
+            // Tile is a wall
+            return false;
+        }
+
+        // Check if an enemy is already at this position
+        if self
+            .enemies
+            .iter()
+            .any(|enemy| enemy.position.x == x && enemy.position.y == y)
+        {
+            return false;
+        }
+
+        true
     }
 
     fn detect_rooms(&mut self) {
@@ -384,15 +399,15 @@ impl Floor {
         let is_wall = self.get_tile(x, y);
 
         if is_wall {
-            // Multiple wall characters for visual variety
-            let wall_chars = ['█', '▓', '▒', '▀', '▄', '■', '◆', '◊'];
+            let wall_chars = ['$', '#', '+', '*', '%', '=', '÷', '×'];
+
+            // Stable per-tile RNG (no flicker, still "random")
+            let seed = (x as u64) << 32 | (y as u64);
+            let mut rng = SmallRng::seed_from_u64(seed);
+
+            let ch = wall_chars[rng.random_range(0..wall_chars.len())];
             let nearby_floors = self.count_nearby_floors(x, y, 2);
-
-            // Choose wall character based on position (seeded from coordinates for consistency)
-            let char_idx =
-                ((x as usize).wrapping_mul(73) ^ (y as usize).wrapping_mul(97)) % wall_chars.len();
-            let ch = wall_chars[char_idx];
-
+            // Consistent wall color
             let color = match nearby_floors {
                 0..=1 => Color::Indexed(236),
                 2..=3 => Color::Indexed(238),
@@ -400,7 +415,7 @@ impl Floor {
                 _ => Color::Indexed(242),
             };
 
-            let style = Style::new().fg(color);
+            let style: Style = Style::new().fg(color);
             Some((ch, style))
         } else {
             let wall_proximity = self.count_walls_near(x, y, 1);
@@ -418,7 +433,6 @@ impl Floor {
         }
     }
 
-    #[allow(dead_code)]
     fn count_nearby_floors(&self, x: i32, y: i32, distance: i32) -> i32 {
         let mut count = 0;
         for dy in -distance..=distance {
@@ -441,7 +455,6 @@ impl Floor {
         count
     }
 
-    #[allow(dead_code)]
     fn count_walls_near(&self, x: i32, y: i32, distance: i32) -> i32 {
         let mut count = 0;
         for dy in -distance..=distance {
@@ -709,8 +722,9 @@ impl Floor {
                     let template_idx = rng.random_range(0..templates.len());
                     let template = templates[template_idx].clone();
 
-                    // Create enemy from template
-                    let mut enemy = crate::model::enemy::Enemy::new(x, y, template.speed);
+                    // Create enemy from template with speed multiplier applied
+                    let adjusted_speed = template.speed * crate::constants::ENEMY_SPEED_MULTIPLIER;
+                    let mut enemy = crate::model::enemy::Enemy::new(x, y, adjusted_speed);
                     enemy.health = template.health;
                     enemy.max_health = template.health;
                     enemy.rarity = template.rarity.clone();
@@ -767,6 +781,67 @@ impl Floor {
         for item in &mut self.items {
             item.update(delta);
         }
+    }
+
+    /// Spawn a boss on the floor at a strategic location
+    pub fn spawn_boss(
+        &mut self,
+        boss_type: crate::model::boss::BossType,
+    ) -> Option<crate::model::boss::BossEnemy> {
+        use crate::model::boss::BossEnemy;
+
+        // Try to spawn boss in the largest room (usually the center)
+        if self.rooms.is_empty() {
+            return None;
+        }
+
+        let largest_room = self
+            .rooms
+            .iter()
+            .max_by_key(|room| room.tiles.len())
+            .cloned();
+
+        if let Some(room) = largest_room {
+            // Spawn boss at the room's center
+            let (cx, cy) = room.center;
+
+            // Find nearest walkable tile to the center
+            let mut best_pos = None;
+            for radius in 0..5i32 {
+                for dx in -radius..=radius {
+                    for dy in -radius..=radius {
+                        if (dx.abs() + dy.abs()) == radius {
+                            let nx = cx + dx;
+                            let ny = cy + dy;
+                            if nx >= 0
+                                && nx < self.width
+                                && ny >= 0
+                                && ny < self.height
+                                && self.is_walkable(nx, ny)
+                                && !self.enemy_exists_at(nx, ny)
+                            {
+                                best_pos = Some((nx, ny));
+                                break;
+                            }
+                        }
+                    }
+                    if best_pos.is_some() {
+                        break;
+                    }
+                }
+                if best_pos.is_some() {
+                    break;
+                }
+            }
+
+            if let Some((x, y)) = best_pos {
+                let boss = BossEnemy::new(x, y, boss_type);
+                self.enemies.push(boss.base_enemy.clone());
+                return Some(boss);
+            }
+        }
+
+        None
     }
 }
 

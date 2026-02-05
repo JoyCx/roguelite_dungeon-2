@@ -2,6 +2,7 @@
     "chat.tools.terminal.autoApprove": {
         "cargo check": true,
         "cargo run": true,
-        "timeout": true
+        "timeout": true,
+        "cargo test": true
     }
 }

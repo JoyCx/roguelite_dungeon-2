@@ -51,7 +51,7 @@ impl Enemy {
             collision_enabled: true,
             collision_with_player: false,
             movement_ticks: 0.0,
-            attack_ticks: 0.0,
+            attack_ticks: 10.0, // Start with cooldown to prevent immediate attacks on spawn
             is_wandering: false,
             spawn_point: pos,
             health: 10, // Default, will be set from template
@@ -72,7 +72,21 @@ impl Enemy {
     }
 
     pub fn apply_knockback(&mut self, dx: f32, dy: f32, force: f32) {
-        self.knockback_velocity = (dx * force, dy * force);
+        // Normalize direction to prevent diagonal knockback from being stronger
+        // Only apply knockback in the dominant direction
+        let abs_dx = dx.abs();
+        let abs_dy = dy.abs();
+
+        if abs_dx > abs_dy {
+            // Knockback primarily in x direction
+            self.knockback_velocity = (dx * force, 0.0);
+        } else if abs_dy > abs_dx {
+            // Knockback primarily in y direction
+            self.knockback_velocity = (0.0, dy * force);
+        } else {
+            // Equal in both directions - apply diagonal
+            self.knockback_velocity = (dx * force, dy * force);
+        }
     }
 
     pub fn is_damaged_animating(&self) -> bool {

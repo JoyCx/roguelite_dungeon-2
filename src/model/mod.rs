@@ -1,5 +1,6 @@
 pub mod arrow;
 pub mod attack_pattern;
+pub mod boss;
 pub mod character;
 pub mod collision;
 pub mod consumable;
@@ -17,6 +18,8 @@ pub mod particle;
 pub mod pathfinding_cache;
 pub mod reach_shape;
 pub mod settings;
+pub mod skill;
+pub mod skill_tree_path;
 pub mod status_effect;
 pub mod ultimate;
 pub mod weapon;

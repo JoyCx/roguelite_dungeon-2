@@ -7,6 +7,7 @@
   "dash": "Space",
   "block": "RightClick",
   "toggle_inv": "C",
+  "use_consumable": "E",
   "special_item": "Q",
   "inventory_up": "Up",
   "inventory_down": "Down",

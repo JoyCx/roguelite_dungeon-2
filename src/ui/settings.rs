@@ -12,6 +12,7 @@ pub fn draw(f: &mut Frame, app: &mut App, area: Rect, pulse: Color) {
         format!("Dash:            [{}]", s.dash),
         format!("Block:           [{}]", s.block),
         format!("Inventory Focus: [{}]", s.toggle_inv),
+        format!("Use Consumable:  [{}]", s.use_consumable),
         format!("Inv Up:          [{}]", s.inventory_up),
         format!("Inv Down:        [{}]", s.inventory_down),
         format!("Item Describe:   [{}]", s.item_describe),
@@ -30,11 +31,11 @@ pub fn draw(f: &mut Frame, app: &mut App, area: Rect, pulse: Color) {
         .enumerate()
         .map(|(i, text)| {
             let mut style = Style::default().fg(Color::Gray);
-            if i == 16 {
+            if i == 17 {
                 style = style.fg(Color::Green);
-            } else if i == 17 {
-                style = style.fg(Color::Yellow);
             } else if i == 18 {
+                style = style.fg(Color::Yellow);
+            } else if i == 19 {
                 style = style.fg(Color::Red);
             }
             ListItem::new(text.as_str()).style(style)

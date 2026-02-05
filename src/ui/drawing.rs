@@ -548,7 +548,7 @@ pub fn render_item_description_popup(
 }
 
 pub fn render_pause_indicator(f: &mut Frame, area: Rect) {
-    let pause_text = "⏸ PAUSED ⏸";
+    let pause_text = "⏸ PAUSED ⏸ | Press [T] for Skill Tree";
     let pause_paragraph = Paragraph::new(pause_text)
         .alignment(Alignment::Center)
         .style(

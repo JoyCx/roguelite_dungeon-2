@@ -36,10 +36,10 @@ pub fn handle_settings_input(app: &mut App, key: crossterm::event::KeyEvent) {
     match app.settings_mode {
         crate::app::SettingsMode::Navigating => match key.code {
             KeyCode::Up | KeyCode::Char('w') | KeyCode::Char('W') => {
-                super::menu::move_selection_up(&mut app.settings_state, 19);
+                super::menu::move_selection_up(&mut app.settings_state, 20);
             }
             KeyCode::Down | KeyCode::Char('s') | KeyCode::Char('S') => {
-                super::menu::move_selection_down(&mut app.settings_state, 19);
+                super::menu::move_selection_down(&mut app.settings_state, 20);
             }
             KeyCode::PageUp => app.set_scroll(app.scroll_offset.saturating_sub(5)),
             KeyCode::PageDown => app.set_scroll(app.scroll_offset.saturating_add(5)),
@@ -74,11 +74,12 @@ pub fn handle_settings_input(app: &mut App, key: crossterm::event::KeyEvent) {
                 5 => app.temp_settings.dash = k,
                 6 => app.temp_settings.block = k,
                 7 => app.temp_settings.toggle_inv = k,
-                8 => app.temp_settings.inventory_up = k,
-                9 => app.temp_settings.inventory_down = k,
-                10 => app.temp_settings.item_describe = k,
-                11 => app.temp_settings.pause = k,
-                12 => app.temp_settings.special_item = k,
+                8 => app.temp_settings.use_consumable = k,
+                9 => app.temp_settings.inventory_up = k,
+                10 => app.temp_settings.inventory_down = k,
+                11 => app.temp_settings.item_describe = k,
+                12 => app.temp_settings.pause = k,
+                13 => app.temp_settings.special_item = k,
                 _ => {}
             }
             app.settings_mode = crate::app::SettingsMode::Navigating;
@@ -209,6 +210,14 @@ pub fn handle_game_input(app: &mut App, key: crossterm::event::KeyEvent) {
                 app.dash();
             } else if key_matches(key.code, &settings.attack) {
                 app.use_current_weapon();
+            } else if key_matches(key.code, &settings.use_consumable) {
+                // Use the selected consumable (or first one if not focused)
+                let idx = if app.inventory_focused {
+                    app.inventory_scroll_index
+                } else {
+                    0
+                };
+                app.use_consumable(idx);
             } else if key_matches(key.code, &settings.special_item) {
                 app.use_ultimate();
             } else if key_matches(key.code, &settings.toggle_inv) {
@@ -217,6 +226,12 @@ pub fn handle_game_input(app: &mut App, key: crossterm::event::KeyEvent) {
                 app.block();
             } else if key.code == KeyCode::Char('h') || key.code == KeyCode::Char('H') {
                 app.cycle_dev_attack_pattern();
+            } else if key.code == KeyCode::Char('t') || key.code == KeyCode::Char('T') {
+                // Open skill tree during gameplay
+                app.previous_state = Some(AppState::Game);
+                app.state = AppState::SkillTree;
+                app.is_paused = true; // Automatically pause the game
+                app.skill_tree_selection = Some(0);
             }
         }
     }
@@ -225,8 +240,8 @@ pub fn handle_game_input(app: &mut App, key: crossterm::event::KeyEvent) {
 fn handle_settings_selection(app: &mut App) {
     let sel = app.settings_state.selected().unwrap_or(0);
     match sel {
-        0..=12 => app.settings_mode = crate::app::SettingsMode::Rebinding,
-        13 => {
+        0..=13 => app.settings_mode = crate::app::SettingsMode::Rebinding,
+        14 => {
             // Difficulty toggle (current difficulty)
             app.temp_settings.difficulty = match &app.temp_settings.difficulty {
                 crate::model::item_tier::Difficulty::Easy => {
@@ -243,7 +258,7 @@ fn handle_settings_selection(app: &mut App) {
                 }
             };
         }
-        14 => {
+        15 => {
             // Default difficulty toggle
             app.temp_settings.default_difficulty = match &app.temp_settings.default_difficulty {
                 crate::model::item_tier::Difficulty::Easy => {
@@ -260,12 +275,12 @@ fn handle_settings_selection(app: &mut App) {
                 }
             };
         }
-        16 => {
+        17 => {
             app.settings = app.temp_settings.clone();
             let _ = app.settings.save();
             app.state = AppState::MainMenu;
         }
-        17 => {
+        18 => {
             app.temp_settings = app.settings.clone();
             app.state = AppState::MainMenu;
         }
@@ -287,6 +302,12 @@ pub fn handle_dev_menu_input(app: &mut App, key: crossterm::event::KeyEvent) {
     match key.code {
         KeyCode::Esc => {
             app.state = AppState::MainMenu;
+        }
+        KeyCode::Char('t') | KeyCode::Char('T') => {
+            // Open skill tree from dev menu
+            app.previous_state = Some(AppState::DevMenu);
+            app.state = AppState::SkillTree;
+            app.skill_tree_selection = Some(0);
         }
         KeyCode::Enter => {
             app.regenerate_floor();
@@ -455,5 +476,51 @@ pub fn handle_character_creation_input(app: &mut App, key: crossterm::event::Key
             }
             _ => {}
         }
+    }
+}
+
+pub fn handle_skill_tree_input(app: &mut App, key: crossterm::event::KeyEvent) {
+    use crate::model::skill_tree_path::PathType;
+
+    let available_paths = app.character.skill_tree_path.get_available_paths();
+    let num_paths = available_paths.len();
+
+    match key.code {
+        KeyCode::Up | KeyCode::Char('w') | KeyCode::Char('W') => {
+            if let Some(idx) = app.skill_tree_selection {
+                let new_idx = if idx > 0 { idx - 1 } else { num_paths - 1 };
+                app.skill_tree_selection = Some(new_idx);
+            }
+        }
+        KeyCode::Down | KeyCode::Char('s') | KeyCode::Char('S') => {
+            if let Some(idx) = app.skill_tree_selection {
+                let new_idx = (idx + 1) % num_paths;
+                app.skill_tree_selection = Some(new_idx);
+            }
+        }
+        KeyCode::Enter | KeyCode::Char(' ') => {
+            if let Some(idx) = app.skill_tree_selection {
+                if idx < available_paths.len() {
+                    let path_type = available_paths[idx];
+                    let _ = app
+                        .character
+                        .skill_tree_path
+                        .purchase_upgrade(path_type, &mut app.character.gold);
+                    // Apply the bonuses to character stats
+                    app.character.apply_skill_tree_bonuses();
+                }
+            }
+        }
+        KeyCode::Char('t') | KeyCode::Char('T') | KeyCode::Esc => {
+            // Return to the previous state (Game or DevMenu)
+            if let Some(saved_state) = app.previous_state.take() {
+                app.state = saved_state;
+                // If returning to Game, unpause
+                if matches!(app.state, AppState::Game) {
+                    app.is_paused = false;
+                }
+            }
+        }
+        _ => {}
     }
 }

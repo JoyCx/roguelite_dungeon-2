@@ -486,7 +486,7 @@ impl AttackPattern {
         let mut frames: Vec<AnimationFrame> = Vec::new();
 
         // Helper: generate filled circle
-        let mut circle = |cx: i32, cy: i32, r: i32| -> Vec<(i32, i32)> {
+        let circle = |cx: i32, cy: i32, r: i32| -> Vec<(i32, i32)> {
             let mut tiles = Vec::new();
             let r_sq = r * r;
             for dx in -r..=r {
@@ -569,7 +569,7 @@ impl AttackPattern {
 
             // Expanding rings
             for r in 1..=radius {
-                let mut tiles = circle(impact_x, impact_y, r);
+                let tiles = circle(impact_x, impact_y, r);
                 frames.push(AnimationFrame {
                     tiles,
                     color: if r == 1 { Color::LightRed } else { Color::Red },

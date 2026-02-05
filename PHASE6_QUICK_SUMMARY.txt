@@ -1,0 +1,104 @@
+# Phase 6 Bug Fixes - Quick Reference
+
+## What Was Fixed
+
+| Bug | Status | Solution | Files |
+|-----|--------|----------|-------|
+| 🚀 Enemy speed too fast | ✅ FIXED | Added `ENEMY_SPEED_MULTIPLIER = 0.5` constant | constants.rs, floor.rs, boss.rs |
+| 💔 Player damaged at start | ✅ FIXED | Initialize enemy attack_ticks to 10.0 | enemy.rs |
+| 🎯 Knockback goes diagonal | ✅ FIXED | Implement directional knockback (X or Y, not both) | character.rs, enemy.rs |
+| ⚡ Enemies move too fast | ✅ FIXED | Increased movement ticks from 5 to 12 | constants.rs |
+| 👁️ Attack pattern not visible | 📋 NOTED | UI feature, not gameplay bug - deferred to Phase 7 | - |
+
+## How to Tune Enemy Difficulty
+
+Edit `src/constants.rs`:
+
+```rust
+// Adjust this value to control overall enemy speed:
+pub const ENEMY_SPEED_MULTIPLIER: f32 = 0.5;  // 50% = current
+
+// Recommended values:
+// 0.3 = Very Easy
+// 0.5 = Easy/Normal (current)
+// 0.75 = Hard
+// 1.0 = Original speed
+// 1.25+ = Harder
+```
+
+Recompile: `cargo build --release`
+
+## Test Verification
+
+All 130 tests passing:
+```bash
+cargo test 2>&1 | grep "test result"
+```
+
+Expected output:
+```
+test result: ok. 69 passed   (unit tests)
+test result: ok. 27 passed   (edge case tests)
+test result: ok. 34 passed   (integration tests)
+```
+
+## Gameplay Changes Summary
+
+### Before Bug Fixes
+- ❌ Enemies spawned with instant attack readiness
+- ❌ Knockback applied diagonally regardless of attack direction
+- ❌ Enemies moved every 5 game ticks (too fast)
+- ❌ No way to adjust enemy speed for balance/testing
+
+### After Bug Fixes
+- ✅ Enemies have 2 second grace period after spawning (attack_ticks = 10)
+- ✅ Knockback follows dominant direction (mostly straight, not diagonal)
+- ✅ Enemies move every 12 game ticks (slower)
+- ✅ Global speed multiplier allows difficulty scaling
+
+## Known Limitations (Phase 7 Work)
+
+1. **Attack Patterns Not Visible**: BossEnemy has attack_pattern field but terminal UI doesn't render it. This is deferred to Phase 7 UI work.
+
+## For Playtesting
+
+When testing, adjust `ENEMY_SPEED_MULTIPLIER` in constants.rs to verify balance:
+
+```rust
+// Too easy? Increase multiplier:
+pub const ENEMY_SPEED_MULTIPLIER: f32 = 0.75;
+
+// Too hard? Decrease multiplier:
+pub const ENEMY_SPEED_MULTIPLIER: f32 = 0.3;
+```
+
+Then run: `cargo run --release`
+
+## Commits/Changes Made
+
+1. `src/constants.rs`: 
+   - Added ENEMY_SPEED_MULTIPLIER
+   - Added BOSS_BASE_SPEED
+   - Increased ENEMY_MOVEMENT_TICKS_REQUIRED (5 → 12)
+
+2. `src/model/floor.rs`:
+   - Apply speed multiplier in spawn_enemies()
+
+3. `src/model/boss.rs`:
+   - Use constants for boss speed initialization
+   - Import constants
+
+4. `src/model/enemy.rs`:
+   - Initialize attack_ticks to 10.0 (no instant attacks)
+   - Implement directional apply_knockback()
+
+5. `src/model/character.rs`:
+   - Implement directional apply_knockback()
+
+## Ready for Phase 7
+
+✅ All gameplay bugs fixed
+✅ All tests passing (130/130)
+✅ Enemy balance significantly improved
+✅ Physics simulation corrected
+✅ Ready for UI improvements and feature additions

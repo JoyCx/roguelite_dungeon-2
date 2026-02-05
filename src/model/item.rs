@@ -107,6 +107,33 @@ impl ItemDrop {
                         ItemTier::Mythic => '◉',
                         ItemTier::Godly => '⊙',
                     },
+                    WeaponType::Spear => match self.tier {
+                        ItemTier::Common => 'p',
+                        ItemTier::Rare => '⟡',
+                        ItemTier::Epic => '⤥',
+                        ItemTier::Exotic => '⊲',
+                        ItemTier::Legendary => '⊲',
+                        ItemTier::Mythic => '⦒',
+                        ItemTier::Godly => '⫷',
+                    },
+                    WeaponType::Axe => match self.tier {
+                        ItemTier::Common => 'a',
+                        ItemTier::Rare => '⛚',
+                        ItemTier::Epic => '⚔',
+                        ItemTier::Exotic => '⊬',
+                        ItemTier::Legendary => '⊬',
+                        ItemTier::Mythic => '◭',
+                        ItemTier::Godly => '◬',
+                    },
+                    WeaponType::Staff => match self.tier {
+                        ItemTier::Common => 'w',
+                        ItemTier::Rare => '†',
+                        ItemTier::Epic => '‡',
+                        ItemTier::Exotic => '⊕',
+                        ItemTier::Legendary => '⊕',
+                        ItemTier::Mythic => '◎',
+                        ItemTier::Godly => '☉',
+                    },
                 }
             }
         }

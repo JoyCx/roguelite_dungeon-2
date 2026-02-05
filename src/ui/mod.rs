@@ -3,6 +3,7 @@ pub mod dev_menu;
 pub mod drawing;
 pub mod main_menu;
 pub mod settings;
+pub mod skill_tree;
 
 use crate::app::{App, AppState};
 use ratatui::prelude::*;
@@ -314,5 +315,6 @@ pub fn draw(f: &mut Frame, app: &mut App) {
             }
         }
         AppState::DevMenu => dev_menu::draw(f, app, area),
+        AppState::SkillTree => skill_tree::draw(f, app, area),
     }
 }

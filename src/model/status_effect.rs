@@ -9,6 +9,7 @@ pub enum StatusEffectType {
     Cripple,        // Reduced movement speed
     Fear,           // Moves away from player
     PoisonImmunity, // Prevents poison application
+    Healing,        // Restores health per second (damage_per_sec is negative)
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -29,6 +30,7 @@ impl StatusEffect {
             StatusEffectType::Cripple => 0.0,
             StatusEffectType::Fear => 0.0,
             StatusEffectType::PoisonImmunity => 0.0,
+            StatusEffectType::Healing => 0.0, // Healing uses negative damage_per_sec
         };
 
         Self {

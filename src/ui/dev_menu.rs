@@ -29,7 +29,7 @@ pub fn draw(f: &mut Frame, app: &mut App, area: Rect) {
     };
 
     let input_text = if app.dev_seed_input.is_empty() {
-        "[Commands: R=Random | ENTER=Generate | E=Spawn Enemy | D=Damage Test | G=Add Gold | H=Cycle Attack Pattern | P=Play | ESC=Back]"
+        "[Commands: R=Random | ENTER=Generate | E=Spawn Enemy | D=Damage Test | G=Add Gold | H=Cycle Attack Pattern | T=Skill Tree | P=Play | ESC=Back]"
             .to_string()
     } else {
         format!("Seed Input: {}", app.dev_seed_input)

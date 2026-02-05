@@ -11,12 +11,14 @@ use ratatui::prelude::Color;
 use ratatui::widgets::ListState;
 use std::time::Instant;
 
+#[derive(Clone, Copy)]
 pub enum AppState {
     MainMenu,
     CharacterCreation,
     Settings,
     Game,
     DevMenu,
+    SkillTree,
 }
 
 #[derive(PartialEq)]
@@ -143,8 +145,9 @@ pub struct App {
     pub char_name_input_mode: bool,
     pub char_creation_selection: usize,
     pub dev_attack_pattern: crate::model::attack_pattern::AttackPattern,
-    // NEW: List of currently playing animations
     pub active_animations: Vec<ActiveAnimation>,
+    pub skill_tree_selection: Option<usize>, // For skill tree UI navigation
+    pub previous_state: Option<AppState>,    // To track where we came from when opening skill tree
 }
 
 impl App {
@@ -193,7 +196,9 @@ impl App {
             char_creation_selection: 0,
             movement_tick_counter: 0,
             dev_attack_pattern: crate::model::attack_pattern::AttackPattern::BasicSlash,
-            active_animations: Vec::new(), // Initialize list
+            active_animations: Vec::new(),
+            skill_tree_selection: Some(0), // Initialize for skill tree UI
+            previous_state: None,          // No previous state initially
         }
     }
 
@@ -430,6 +435,42 @@ impl App {
         )
     }
 
+    /// Get the attack area based on the current animation frame
+    /// This ensures hitboxes match what's visually displayed
+    pub fn get_current_attack_area(&self) -> Vec<(i32, i32)> {
+        if let Some(attack_time) = self.character.last_attack_time {
+            let elapsed = attack_time.elapsed().as_secs_f32();
+
+            // Get all frames for current attack
+            let (dx, dy) = self.character.last_direction;
+            let (attack_dx, attack_dy) = if dx == 0 && dy == 0 { (0, 1) } else { (dx, dy) };
+            let frames = self.dev_attack_pattern.get_animation_frames(
+                self.character_position.0,
+                self.character_position.1,
+                attack_dx,
+                attack_dy,
+            );
+
+            if frames.is_empty() {
+                return vec![];
+            }
+
+            // Find which frame should be displayed based on elapsed time
+            let mut accumulated_time = 0.0;
+            for frame in &frames {
+                accumulated_time += frame.frame_duration;
+                if elapsed < accumulated_time {
+                    return frame.tiles.clone();
+                }
+            }
+
+            // If we've gone past all frames, return the last frame's tiles
+            frames.last().map(|f| f.tiles.clone()).unwrap_or_default()
+        } else {
+            vec![]
+        }
+    }
+
     pub fn shoot(&mut self) {
         if !self.character.can_shoot() || !self.should_tick() {
             return;
@@ -534,6 +575,15 @@ impl App {
                 }
                 crate::model::weapon::WeaponType::Mace => {
                     self.attack();
+                }
+                crate::model::weapon::WeaponType::Spear => {
+                    self.attack();
+                }
+                crate::model::weapon::WeaponType::Axe => {
+                    self.attack();
+                }
+                crate::model::weapon::WeaponType::Staff => {
+                    self.shoot();
                 }
             }
         }
@@ -728,9 +778,15 @@ impl App {
             self.character_position.0 as f32,
             self.character_position.1 as f32,
         );
-        let player_attack_area = self.get_attack_area();
         let mut attacks_on_player: Vec<(i32, f32, f32)> = Vec::new();
         let mut hit_enemy_indices: Vec<usize> = Vec::new();
+
+        // Get current attack area before borrowing floor mutably
+        let current_attack_area = if self.character.is_attacking_animating() {
+            self.get_current_attack_area()
+        } else {
+            vec![]
+        };
 
         if let Some(floor) = &mut self.current_floor {
             floor.update_items(delta);
@@ -820,7 +876,7 @@ impl App {
                 }
 
                 let distance = enemy.position.distance_to(&player_pos);
-                if distance <= 1 && enemy.attack_ticks >= 5.0 {
+                if distance <= 1 && enemy.attack_ticks >= 65.0 {
                     enemy.attack_ticks = 0.0;
 
                     let rarity_damage = match enemy.rarity {
@@ -832,32 +888,79 @@ impl App {
                     };
 
                     let enemy_pos_f32 = (enemy.position.x as f32, enemy.position.y as f32);
-                    let dx = (player_pos_f32.0 - enemy_pos_f32.0).signum();
-                    let dy = (player_pos_f32.1 - enemy_pos_f32.1).signum();
+                    let diff_x = player_pos_f32.0 - enemy_pos_f32.0;
+                    let diff_y = player_pos_f32.1 - enemy_pos_f32.1;
+                    let distance_sq = diff_x * diff_x + diff_y * diff_y;
+
+                    // Normalize direction to avoid diagonal bias in knockback
+                    let (dx, dy) = if distance_sq > 0.0 {
+                        let distance_f = distance_sq.sqrt();
+                        (diff_x / distance_f, diff_y / distance_f)
+                    } else {
+                        (0.0, 1.0)
+                    };
+
+                    // Generate attack animation for enemy
+                    let attack_pattern = match enemy.rarity {
+                        crate::model::enemy_type::EnemyRarity::Fighter => {
+                            crate::model::attack_pattern::AttackPattern::BasicSlash
+                        }
+                        crate::model::enemy_type::EnemyRarity::Guard => {
+                            crate::model::attack_pattern::AttackPattern::BasicSlash
+                        }
+                        crate::model::enemy_type::EnemyRarity::Champion => {
+                            crate::model::attack_pattern::AttackPattern::WhirlwindAttack
+                        }
+                        crate::model::enemy_type::EnemyRarity::Elite => {
+                            crate::model::attack_pattern::AttackPattern::GroundSlam(1)
+                        }
+                        crate::model::enemy_type::EnemyRarity::Boss => {
+                            crate::model::attack_pattern::AttackPattern::WhirlwindAttack
+                        }
+                    };
+
+                    let attack_dir_x = (dx.signum()) as i32;
+                    let attack_dir_y = (dy.signum()) as i32;
+                    let frames = attack_pattern.get_animation_frames(
+                        enemy.position.x,
+                        enemy.position.y,
+                        attack_dir_x,
+                        attack_dir_y,
+                    );
+
+                    if !frames.is_empty() {
+                        let category = Self::get_attack_pattern_category(&attack_pattern);
+                        self.active_animations
+                            .push(ActiveAnimation::new_with_category(frames, category));
+                    }
 
                     attacks_on_player.push((rarity_damage, dx, dy));
                 }
 
-                if player_attack_area.contains(&(enemy.position.x, enemy.position.y)) {
+                // Only register hits if player is in attack animation
+                if !current_attack_area.is_empty()
+                    && current_attack_area.contains(&(enemy.position.x, enemy.position.y))
+                {
                     hit_enemy_indices.push(enemy_idx);
                 }
             }
 
-            let player_pos = (
+            let _player_pos = (
                 self.character_position.0 as f32,
                 self.character_position.1 as f32,
             );
             for idx in hit_enemy_indices {
                 if idx < floor.enemies.len() {
-                    let damage = self.character.attack_damage;
-                    let knockback_force = (damage as f32 * 0.1).max(0.5);
+                    let damage = self.character.get_effective_attack_damage();
+                    let knockback_force = 1.0; // Exactly 1 block knockback per hit
 
-                    let enemy_pos = (
-                        floor.enemies[idx].position.x as f32,
-                        floor.enemies[idx].position.y as f32,
-                    );
-                    let dx = (enemy_pos.0 - player_pos.0).signum();
-                    let dy = (enemy_pos.1 - player_pos.1).signum();
+                    // Use player's facing direction for knockback, not direction to enemy
+                    let (player_dir_x, player_dir_y) = self.character.last_direction;
+                    let (dx, dy) = if player_dir_x == 0 && player_dir_y == 0 {
+                        (0.0, 1.0) // default direction if no direction set
+                    } else {
+                        (player_dir_x as f32, player_dir_y as f32)
+                    };
 
                     floor.enemies[idx].apply_knockback(dx, dy, knockback_force);
                     floor.enemies[idx].take_damage(damage);
@@ -876,15 +979,51 @@ impl App {
                 let enemy_x = enemy.position.x;
                 let enemy_y = enemy.position.y;
 
+                // Always drop gold - guaranteed success
                 let gold_drop = enemy.base_gold;
-                let gold_item = crate::model::item::ItemDrop::gold(gold_drop, enemy_x, enemy_y);
-                let _ = floor.try_drop_item_adjacent(gold_item, enemy_x, enemy_y);
+                let mut gold_item = crate::model::item::ItemDrop::gold(gold_drop, enemy_x, enemy_y);
 
+                // Try to drop at adjacent position first, otherwise place at enemy location
+                if !floor.try_drop_item_adjacent(gold_item, enemy_x, enemy_y) {
+                    gold_item = crate::model::item::ItemDrop::gold(gold_drop, enemy_x, enemy_y);
+                    floor.add_item(gold_item);
+                }
+
+                // Weapon drops with 33% chance
                 if rand::random::<f32>() < 0.33 {
-                    let weapon = crate::model::weapon::Weapon::new_sword();
-                    let weapon_drop =
-                        crate::model::item::ItemDrop::weapon(weapon, enemy_x, enemy_y);
-                    let _ = floor.try_drop_item_adjacent(weapon_drop, enemy_x, enemy_y);
+                    // Determine weapon rarity based on difficulty
+                    use crate::model::item_tier::{Difficulty, ItemTier};
+                    use rand::prelude::IndexedRandom;
+
+                    let rarity = match self.settings.difficulty {
+                        Difficulty::Easy => {
+                            let rarities = vec![ItemTier::Common, ItemTier::Rare];
+                            rarities.choose(&mut rand::rng()).unwrap().clone()
+                        }
+                        Difficulty::Normal => {
+                            let rarities = vec![ItemTier::Rare, ItemTier::Epic];
+                            rarities.choose(&mut rand::rng()).unwrap().clone()
+                        }
+                        Difficulty::Hard => {
+                            let rarities = vec![ItemTier::Epic, ItemTier::Exotic];
+                            rarities.choose(&mut rand::rng()).unwrap().clone()
+                        }
+                        Difficulty::Death => {
+                            let rarities =
+                                vec![ItemTier::Exotic, ItemTier::Legendary, ItemTier::Mythic];
+                            rarities.choose(&mut rand::rng()).unwrap().clone()
+                        }
+                    };
+
+                    let weapon = crate::model::weapon::Weapon::random_for_rarity(&rarity);
+                    let mut weapon_drop =
+                        crate::model::item::ItemDrop::weapon(weapon.clone(), enemy_x, enemy_y);
+
+                    if !floor.try_drop_item_adjacent(weapon_drop, enemy_x, enemy_y) {
+                        weapon_drop =
+                            crate::model::item::ItemDrop::weapon(weapon, enemy_x, enemy_y);
+                        floor.add_item(weapon_drop);
+                    }
                 }
             }
         }
