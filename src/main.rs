@@ -57,6 +57,10 @@ where
 
         app.update_arrows();
 
+        // Update audio (fade transitions)
+        let elapsed = last_tick.elapsed().as_secs_f32();
+        app.audio_manager.update(elapsed);
+
         terminal.draw(|f| ui::draw(f, app))?;
         app.last_scroll_offset = app.scroll_offset;
 

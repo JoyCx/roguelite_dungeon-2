@@ -21,6 +21,8 @@ pub struct Settings {
     pub difficulty: Difficulty,
     pub default_difficulty: Difficulty,
     pub player_speed: f32, // Multiplier for player movement speed (1.0 = default)
+    pub music_volume: f32, // Music volume 0.0 - 1.0
+    pub sound_volume: f32, // Sound effects volume 0.0 - 1.0
 }
 
 impl Default for Settings {
@@ -43,6 +45,8 @@ impl Default for Settings {
             difficulty: Difficulty::Normal,
             default_difficulty: Difficulty::Normal,
             player_speed: 1.0, // Default speed multiplier
+            music_volume: 0.5, // Default music volume
+            sound_volume: 0.5, // Default sound effects volume
         }
     }
 }

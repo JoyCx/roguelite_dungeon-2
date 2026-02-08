@@ -1,0 +1,57 @@
+add knockback to the enemy's and player's attacks, add a visual animation to it
+make enemies follow the player only when "in radius" of player detection
+each enemy tier will have a different radius, larger the more rare and strong he is
+
+give each enemy a unique ascii design, not all be "E"
+
+
+get rid of the weird arrow circle around enemies and only display their attack_pattern when they actually attack ensure the attack_pattern animations are properly displayed and are rendered only when the enemy attacks and also fade out after the attack animation is finished, every attack animation should eventually fade out in attack_pattern, the pattern itself should do this.
+
+ensure if the player is standing within the enemy's attack animation, we will see the player (prioritize drawing player), when the player/enemies gets damaged, make him colored red for a second as a damaged animation -new animation for player + enemies to show theyre damaged
+
+make enemies have a certain radius - depending on difficulty of the game (multiplier) and their tier, to detect the player and follow him
+
+add visual glint to our entire game - and beautify the ascii art, make every item have its own unique character.
+
+enable the ability to find weapons and pick them up and use them in our inventory 1-9
+
+add a drop item option in our inventory to get rid of the item, place it next to the player on the map, and it will stay there
+
+make sure we cant pick weapons up if our inventory is full
+
+ensure modularity, proper optimization game, and no duplication
+Today 13:13
+
+I have analyzed the codebase and have a good understanding of the current implementation. To ensure I meet your expectations perfectly, I have a few questions:
+
+    Weird Arrow Circle: I found a particle effect called emit_impact that creates a burst of arrows (→, ↘, ↓, ↙, ←, ↖, ↑, ↗) when an entity takes damage. Is this what you referred to as the "weird arrow circle"? If so, should I replace it entirely with the "damaged red" animation, or something else?
+
+    Attack Pattern Animations:
+        Should the AttackPattern animations for enemies be the same as the player's (which are already defined in attack_pattern.rs but not fully integrated into rendering)?
+        You mentioned they should "fade out". Does this mean the characters/symbols used in the animation should change color or just disappear after a certain time?
+        How should "fade out" be handled for patterns that are currently multi-frame (like Fireball or GroundSlam)? Should each frame fade, or only the final state?
+
+    Detection Radius:
+        You mentioned the radius depends on difficulty (multiplier) and tier. Do you have specific values in mind for these multipliers/base radii, or should I come up with balanced defaults (e.g., Base 5 * Multiplier 1.0-2.0 * Tier 1.0-1.5)?
+
+    Visual Glint and Beautification:
+        What exactly do you mean by "visual glint"? Is it a sparkling effect using particles that appears occasionally on the map, or something that happens when the player moves?
+        For beautifying the ASCII art, are there specific characters or symbols you'd like to see for the map tiles (walls/floors) or items?
+
+    Inventory and Weapons:
+        You mentioned inventory slots 1-9. Currently, the game has WeaponInventory (separate from ConsumableInventory). Should I merge them into one unified inventory system, or just ensure weapons can be found and equipped into those 1-9 slots in the WeaponInventory?
+        When dropping an item, should it be placed on any adjacent walkable tile if the player is standing on one, or exactly where the player is?
+
+    Rendering Priority:
+        "ensure if the player is standing within the enemy's attack animation, we will see the player". Does this mean the player character ('@') should always be rendered on top of any attack animation symbols?
+
+    Damaged Animation:
+        For the "red for a second" animation, should the entity's symbol itself turn red, or should there be a red background/overlay?
+
+I'll wait for your clarification on these points before finalizing the plan.
+
+    is a reach display, i dont want it at all yes, its showing at all times, i want the damaged red animation to apply on the player and enemies when theyre attacked, for a second to them to blink red, like they bleed, 2.1.Attack Pattern Animations should be the same for player and enemies, its a modular usage we use for both enemies and players, so if we want to use it on both sides we can, 2.2. fade out means change color and disappear, imagine a real 2d animation of an attack or swing, we see a visual representation that then returns to be nothing, ensure the attack patterns all match this behavior, so when someone attacks, we can call the animation, it will play, and disappear
+    come up with balanced formulas for it 4.1. visual glint is like a glow effect, i want things to glow and have more color and character, light sources, animations 4.2. i just want u to come up with something original, and that does not repeat itself, for example for walls it should be base color and blocks, but there should be a variety of characters that represent a wall so we can design the game better. 5.1. weapon inventory and consumables are seperate, weapons we should have up to 9, and consumables, have no limit 5.2. it should be dropped next to him in an empty space, if there are no empty spaces on the ground, dont drop the item and dont remove it from the inventory
+    yes but ensure we render the damage animation to him aswell
+    entity's symbol
+

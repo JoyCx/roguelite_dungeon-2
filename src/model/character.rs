@@ -63,6 +63,9 @@ pub struct Character {
     // Gold/Currency wallet
     pub gold: u32,
 
+    // Stats tracking
+    pub enemies_killed: u32,
+
     // Knockback system
     pub knockback_velocity: (f32, f32), // knockback direction and remaining force (dx, dy)
     pub damaged_at: Option<Instant>,    // timestamp of when entity was last damaged
@@ -94,6 +97,7 @@ impl Default for Character {
             skill_tree: SkillTree::new(),
             skill_tree_path: SkillTreeManager::new(),
             gold: 0,
+            enemies_killed: 0,
             knockback_velocity: (0.0, 0.0),
             damaged_at: None,
         }
@@ -404,7 +408,7 @@ impl Character {
     /// Apply skill tree stat bonuses to actual stats
     pub fn apply_skill_tree_bonuses(&mut self) {
         let bonuses = self.skill_tree_path.get_total_bonuses();
-        
+
         // Apply health bonus
         let new_health_max = (PLAYER_BASE_HEALTH as f32 * bonuses.health_multiplier) as i32;
         if new_health_max > self.health_max {
@@ -417,15 +421,14 @@ impl Character {
             self.health_max = new_health_max;
             self.health = self.health.min(new_health_max);
         }
-        
+
         // Update actual speed
         self.speed = PLAYER_BASE_SPEED * bonuses.speed_multiplier;
-        
+
         // Note: attack_damage is calculated via get_effective_attack_damage() when needed
         // so we don't modify it directly here
     }
 }
-
 
 #[cfg(test)]
 mod tests {

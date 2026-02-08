@@ -1,7 +1,9 @@
 pub mod character_creation;
+pub mod death_screen;
 pub mod dev_menu;
 pub mod drawing;
 pub mod main_menu;
+pub mod pause_menu;
 pub mod settings;
 pub mod skill_tree;
 
@@ -312,9 +314,12 @@ pub fn draw(f: &mut Frame, app: &mut App) {
             // Render pause indicator last (on top of everything)
             if app.is_paused {
                 drawing::render_pause_indicator(f, area);
+                // Render pause menu if paused
+                pause_menu::draw(f, app, area);
             }
         }
         AppState::DevMenu => dev_menu::draw(f, app, area),
         AppState::SkillTree => skill_tree::draw(f, app, area),
+        AppState::DeathScreen => death_screen::draw(f, app, area),
     }
 }

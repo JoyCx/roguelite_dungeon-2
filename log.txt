@@ -1428,3 +1428,438 @@ Direction: (1, 0)
 === ATTACK ===
 Position: (92, 27)
 Direction: (1, 0)
+
+=== ATTACK ===
+Position: (164, 33)
+Direction: (-1, 0)
+
+=== ATTACK ===
+Position: (122, 27)
+Direction: (0, -1)
+
+=== ATTACK ===
+Position: (122, 27)
+Direction: (0, -1)
+
+=== ATTACK ===
+Position: (122, 27)
+Direction: (0, -1)
+
+=== ATTACK ===
+Position: (122, 27)
+Direction: (0, -1)
+
+=== ATTACK ===
+Position: (122, 20)
+Direction: (0, 1)
+
+=== ATTACK ===
+Position: (122, 20)
+Direction: (0, 1)
+
+=== ATTACK ===
+Position: (122, 20)
+Direction: (0, 1)
+
+=== ATTACK ===
+Position: (122, 20)
+Direction: (0, 1)
+
+=== ATTACK ===
+Position: (122, 20)
+Direction: (0, 1)
+
+=== ATTACK ===
+Position: (122, 20)
+Direction: (0, 1)
+
+=== ATTACK ===
+Position: (122, 20)
+Direction: (0, 1)
+
+=== ATTACK ===
+Position: (122, 20)
+Direction: (0, 1)
+
+=== ATTACK ===
+Position: (122, 20)
+Direction: (0, 1)
+
+=== ATTACK ===
+Position: (122, 20)
+Direction: (0, 1)
+
+=== ATTACK ===
+Position: (122, 20)
+Direction: (0, 1)
+
+=== ATTACK ===
+Position: (122, 20)
+Direction: (0, 1)
+
+=== ATTACK ===
+Position: (122, 20)
+Direction: (0, 1)
+
+=== ATTACK ===
+Position: (122, 20)
+Direction: (0, 1)
+
+=== ATTACK ===
+Position: (122, 20)
+Direction: (0, 1)
+
+=== ATTACK ===
+Position: (122, 20)
+Direction: (0, 1)
+
+=== ATTACK ===
+Position: (122, 20)
+Direction: (0, 1)
+
+=== ATTACK ===
+Position: (122, 20)
+Direction: (0, 1)
+
+=== ATTACK ===
+Position: (122, 20)
+Direction: (0, 1)
+
+=== ATTACK ===
+Position: (122, 20)
+Direction: (0, 1)
+
+=== ATTACK ===
+Position: (122, 20)
+Direction: (0, 1)
+
+=== ATTACK ===
+Position: (122, 20)
+Direction: (0, 1)
+
+=== ATTACK ===
+Position: (122, 20)
+Direction: (0, 1)
+
+=== ATTACK ===
+Position: (122, 20)
+Direction: (0, 1)
+
+=== ATTACK ===
+Position: (122, 20)
+Direction: (0, 1)
+
+=== ATTACK ===
+Position: (122, 20)
+Direction: (0, 1)
+
+=== ATTACK ===
+Position: (122, 20)
+Direction: (0, 1)
+
+=== ATTACK ===
+Position: (122, 20)
+Direction: (0, 1)
+
+=== ATTACK ===
+Position: (122, 20)
+Direction: (0, 1)
+
+=== ATTACK ===
+Position: (122, 20)
+Direction: (0, 1)
+
+=== ATTACK ===
+Position: (122, 20)
+Direction: (0, 1)
+
+=== ATTACK ===
+Position: (122, 20)
+Direction: (0, 1)
+
+=== ATTACK ===
+Position: (122, 20)
+Direction: (0, 1)
+
+=== ATTACK ===
+Position: (122, 20)
+Direction: (0, 1)
+
+=== ATTACK ===
+Position: (122, 20)
+Direction: (0, 1)
+Starting position: (89, 29)
+Starting position: (89, 29)
+Starting position: (89, 29)
+Starting position: (89, 29)
+
+=== ATTACK ===
+Position: (89, 29)
+Direction: (0, 1)
+
+=== ATTACK ===
+Position: (169, 6)
+Direction: (0, -1)
+
+=== ATTACK ===
+Position: (169, 8)
+Direction: (0, 1)
+
+=== ATTACK ===
+Position: (169, 9)
+Direction: (0, 1)
+
+=== ATTACK ===
+Position: (169, 9)
+Direction: (0, 1)
+
+=== ATTACK ===
+Position: (164, 9)
+Direction: (-1, 0)
+Starting position: (89, 29)
+
+=== ATTACK ===
+Position: (89, 29)
+Direction: (0, 1)
+
+=== ATTACK ===
+Position: (36, 29)
+Direction: (1, 0)
+
+=== ATTACK ===
+Position: (36, 22)
+Direction: (0, -1)
+
+=== ATTACK ===
+Position: (36, 16)
+Direction: (-1, 0)
+
+=== ATTACK ===
+Position: (36, 26)
+Direction: (0, -1)
+
+=== ATTACK ===
+Position: (36, 26)
+Direction: (0, -1)
+
+=== ATTACK ===
+Position: (36, 27)
+Direction: (0, -1)
+
+=== ATTACK ===
+Position: (36, 27)
+Direction: (0, -1)
+
+=== ATTACK ===
+Position: (36, 27)
+Direction: (0, -1)
+
+=== ATTACK ===
+Position: (36, 28)
+Direction: (0, -1)
+
+=== ATTACK ===
+Position: (36, 28)
+Direction: (0, -1)
+
+=== ATTACK ===
+Position: (36, 28)
+Direction: (0, -1)
+
+=== ATTACK ===
+Position: (36, 29)
+Direction: (0, -1)
+
+=== ATTACK ===
+Position: (36, 29)
+Direction: (0, -1)
+Starting position: (89, 29)
+
+=== ATTACK ===
+Position: (89, 21)
+Direction: (0, -1)
+Starting position: (89, 29)
+
+=== ATTACK ===
+Position: (49, 45)
+Direction: (0, 1)
+
+=== ATTACK ===
+Position: (109, 22)
+Direction: (1, 0)
+
+=== ATTACK ===
+Position: (109, 22)
+Direction: (1, 0)
+
+=== ATTACK ===
+Position: (98, 22)
+Direction: (1, 0)
+
+=== ATTACK ===
+Position: (98, 22)
+Direction: (1, 0)
+
+=== ATTACK ===
+Position: (98, 22)
+Direction: (1, 0)
+
+=== ATTACK ===
+Position: (98, 22)
+Direction: (1, 0)
+
+=== ATTACK ===
+Position: (98, 22)
+Direction: (1, 0)
+
+=== ATTACK ===
+Position: (98, 22)
+Direction: (1, 0)
+
+=== ATTACK ===
+Position: (98, 22)
+Direction: (1, 0)
+
+=== ATTACK ===
+Position: (98, 22)
+Direction: (1, 0)
+
+=== ATTACK ===
+Position: (98, 22)
+Direction: (1, 0)
+
+=== ATTACK ===
+Position: (98, 22)
+Direction: (1, 0)
+
+=== ATTACK ===
+Position: (98, 22)
+Direction: (1, 0)
+
+=== ATTACK ===
+Position: (98, 22)
+Direction: (1, 0)
+
+=== ATTACK ===
+Position: (98, 22)
+Direction: (1, 0)
+
+=== ATTACK ===
+Position: (98, 22)
+Direction: (1, 0)
+
+=== ATTACK ===
+Position: (98, 22)
+Direction: (1, 0)
+
+=== ATTACK ===
+Position: (98, 22)
+Direction: (1, 0)
+
+=== ATTACK ===
+Position: (98, 22)
+Direction: (1, 0)
+
+=== ATTACK ===
+Position: (98, 22)
+Direction: (1, 0)
+
+=== ATTACK ===
+Position: (98, 22)
+Direction: (1, 0)
+
+=== ATTACK ===
+Position: (98, 22)
+Direction: (1, 0)
+
+=== ATTACK ===
+Position: (98, 22)
+Direction: (1, 0)
+
+=== ATTACK ===
+Position: (98, 22)
+Direction: (1, 0)
+
+=== ATTACK ===
+Position: (98, 22)
+Direction: (1, 0)
+
+=== ATTACK ===
+Position: (35, 24)
+Direction: (0, -1)
+
+=== ATTACK ===
+Position: (35, 24)
+Direction: (0, -1)
+
+=== ATTACK ===
+Position: (35, 24)
+Direction: (0, -1)
+
+=== ATTACK ===
+Position: (35, 25)
+Direction: (0, -1)
+
+=== ATTACK ===
+Position: (35, 25)
+Direction: (0, -1)
+
+=== ATTACK ===
+Position: (35, 26)
+Direction: (0, -1)
+
+=== ATTACK ===
+Position: (35, 26)
+Direction: (0, -1)
+
+=== ATTACK ===
+Position: (35, 26)
+Direction: (0, -1)
+
+=== ATTACK ===
+Position: (35, 27)
+Direction: (0, -1)
+
+=== ATTACK ===
+Position: (35, 27)
+Direction: (0, -1)
+
+=== ATTACK ===
+Position: (35, 28)
+Direction: (0, -1)
+
+=== ATTACK ===
+Position: (35, 28)
+Direction: (0, -1)
+
+=== ATTACK ===
+Position: (35, 28)
+Direction: (0, -1)
+
+=== ATTACK ===
+Position: (35, 29)
+Direction: (0, -1)
+
+=== ATTACK ===
+Position: (35, 29)
+Direction: (0, -1)
+
+=== ATTACK ===
+Position: (35, 30)
+Direction: (0, -1)
+
+=== ATTACK ===
+Position: (35, 30)
+Direction: (0, -1)
+
+=== ATTACK ===
+Position: (35, 31)
+Direction: (0, -1)
+
+=== ATTACK ===
+Position: (35, 31)
+Direction: (0, -1)
+
+=== ATTACK ===
+Position: (35, 31)
+Direction: (0, -1)

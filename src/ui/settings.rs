@@ -20,6 +20,8 @@ pub fn draw(f: &mut Frame, app: &mut App, area: Rect, pulse: Color) {
         format!("Special:         [{}]", s.special_item),
         format!("Difficulty:      [{}]", s.difficulty.name()),
         format!("Default Difficulty: [{}]", s.default_difficulty.name()),
+        format_volume_bar("Music Volume", s.music_volume),
+        format_volume_bar("Sound Volume", s.sound_volume),
         "-------------------".to_string(),
         "SAVE CHANGES".to_string(),
         "DISCARD & BACK".to_string(),
@@ -31,11 +33,11 @@ pub fn draw(f: &mut Frame, app: &mut App, area: Rect, pulse: Color) {
         .enumerate()
         .map(|(i, text)| {
             let mut style = Style::default().fg(Color::Gray);
-            if i == 17 {
+            if i == 19 {
                 style = style.fg(Color::Green);
-            } else if i == 18 {
+            } else if i == 20 {
                 style = style.fg(Color::Yellow);
-            } else if i == 19 {
+            } else if i == 21 {
                 style = style.fg(Color::Red);
             }
             ListItem::new(text.as_str()).style(style)
@@ -52,4 +54,12 @@ pub fn draw(f: &mut Frame, app: &mut App, area: Rect, pulse: Color) {
         .highlight_style(Style::default().bg(pulse).fg(Color::White));
 
     f.render_stateful_widget(list, area, &mut app.settings_state);
+}
+
+fn format_volume_bar(label: &str, volume: f32) -> String {
+    let filled = (volume * 20.0) as usize;
+    let empty = 20 - filled;
+    let bar = format!("[{}{}]", "█".repeat(filled), "░".repeat(empty));
+    let percent = format!("{:.0}%", volume * 100.0);
+    format!("{:<20} {}{}", label, bar, percent)
 }

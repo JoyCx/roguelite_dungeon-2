@@ -1,0 +1,19 @@
+Create me enemy descriptions + spell casts on them using the provided details:
+
+enemy rarities:
+Fighter, Guard, Elite, Champion, Boss
+
+Fighter: have 1 attack type
+Guard: have 1 attack type 
+Elite: have 2 attack types and a block
+
+All below also have special spells cast upon them with buffs, depending on difficulty, will change:
+Champion: have 2 attack types and a weak ultimate
+Elite: have 3 attack types and an average ultimate
+Boss: have 5 attack types and a devestating ultimate
+
+enemies can be undead, or ghosts, ghosts are rarer and have no wall collision
+
+
+
+generate me 3 fighter typ

@@ -36,10 +36,36 @@ pub fn handle_settings_input(app: &mut App, key: crossterm::event::KeyEvent) {
     match app.settings_mode {
         crate::app::SettingsMode::Navigating => match key.code {
             KeyCode::Up | KeyCode::Char('w') | KeyCode::Char('W') => {
-                super::menu::move_selection_up(&mut app.settings_state, 20);
+                super::menu::move_selection_up(&mut app.settings_state, 22);
             }
             KeyCode::Down | KeyCode::Char('s') | KeyCode::Char('S') => {
-                super::menu::move_selection_down(&mut app.settings_state, 20);
+                super::menu::move_selection_down(&mut app.settings_state, 22);
+            }
+            KeyCode::Left | KeyCode::Char('a') | KeyCode::Char('A') => {
+                let sel = app.settings_state.selected().unwrap_or(0);
+                // Music volume
+                if sel == 16 {
+                    app.temp_settings.music_volume =
+                        (app.temp_settings.music_volume - 0.05).max(0.0);
+                }
+                // Sound volume
+                else if sel == 17 {
+                    app.temp_settings.sound_volume =
+                        (app.temp_settings.sound_volume - 0.05).max(0.0);
+                }
+            }
+            KeyCode::Right | KeyCode::Char('d') | KeyCode::Char('D') => {
+                let sel = app.settings_state.selected().unwrap_or(0);
+                // Music volume
+                if sel == 16 {
+                    app.temp_settings.music_volume =
+                        (app.temp_settings.music_volume + 0.05).min(1.0);
+                }
+                // Sound volume
+                else if sel == 17 {
+                    app.temp_settings.sound_volume =
+                        (app.temp_settings.sound_volume + 0.05).min(1.0);
+                }
             }
             KeyCode::PageUp => app.set_scroll(app.scroll_offset.saturating_sub(5)),
             KeyCode::PageDown => app.set_scroll(app.scroll_offset.saturating_add(5)),
@@ -134,6 +160,25 @@ pub fn handle_game_input(app: &mut App, key: crossterm::event::KeyEvent) {
     // Check for pause key - can be pressed anytime during gameplay
     if key_matches(key.code, &settings.pause) {
         app.is_paused = !app.is_paused;
+        if app.is_paused {
+            // Initialize pause menu when entering pause
+            app.pause_menu_selection = 0;
+            app.pause_submenu = None;
+            // Start fade-out: lower volume and muffled effect
+            app.audio_manager.start_fade_out(0.5); // 0.5 second transition
+            app.audio_manager.pause_music();
+        } else {
+            // Resume with fade-in back to settings volume
+            app.audio_manager.resume_music();
+            app.audio_manager
+                .start_fade_in(0.5, app.settings.music_volume); // Fade back to settings volume
+        }
+        return;
+    }
+
+    // If paused, handle pause menu input instead of game input
+    if app.is_paused {
+        crate::ui::pause_menu::handle_input(app, key.code);
         return;
     }
 
@@ -275,16 +320,26 @@ fn handle_settings_selection(app: &mut App) {
                 }
             };
         }
-        17 => {
+        16 | 17 => {
+            // Volume sliders - just navigable with Left/Right arrows
+            // No action needed on Enter
+        }
+        19 => {
+            // Save changes
             app.settings = app.temp_settings.clone();
+            // Sync volume to app and audio manager
+            app.music_volume = app.settings.music_volume;
+            app.sound_volume = app.settings.sound_volume;
+            app.audio_manager.set_music_volume(app.music_volume);
             let _ = app.settings.save();
             app.state = AppState::MainMenu;
         }
-        18 => {
+        20 => {
+            // Discard and back
             app.temp_settings = app.settings.clone();
             app.state = AppState::MainMenu;
         }
-        18 => {
+        21 => {
             // Reset to default settings
             app.settings = Settings::default();
             app.temp_settings = app.settings.clone();
@@ -327,6 +382,7 @@ pub fn handle_dev_menu_input(app: &mut App, key: crossterm::event::KeyEvent) {
 
                     app.character_position = (x, y);
                     app.update_camera(); // Initialize camera position
+                    app.game_started_at = Some(std::time::Instant::now());
                     app.state = AppState::Game;
                 } else {
                     use std::io::Write;
@@ -463,6 +519,11 @@ pub fn handle_character_creation_input(app: &mut App, key: crossterm::event::Key
                         if let Some((x, y)) = floor.find_player_spawn() {
                             app.character_position = (x, y);
                             app.update_camera(); // Initialize camera position
+                            app.game_started_at = Some(std::time::Instant::now());
+
+                            // Start music with fade-in for new game
+                            let _ = app.audio_manager.start_music_with_fade_in();
+
                             app.state = AppState::Game;
                         }
                     }

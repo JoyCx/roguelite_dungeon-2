@@ -1,6 +1,7 @@
 use crate::constants::GAME_TICK_RATE_MS;
 use crate::model::arrow::Arrow;
 use crate::model::attack_pattern::AnimationFrame; //
+use crate::model::audio::AudioManager;
 use crate::model::character::Character;
 use crate::model::floor::Floor;
 use crate::model::gamesave::{GameSave, PlayerStats};
@@ -11,7 +12,7 @@ use ratatui::prelude::Color;
 use ratatui::widgets::ListState;
 use std::time::Instant;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 pub enum AppState {
     MainMenu,
     CharacterCreation,
@@ -19,12 +20,19 @@ pub enum AppState {
     Game,
     DevMenu,
     SkillTree,
+    DeathScreen,
 }
 
 #[derive(PartialEq)]
 pub enum SettingsMode {
     Navigating,
     Rebinding,
+}
+
+#[derive(Clone, Copy, PartialEq)]
+pub enum PauseSubmenu {
+    Volume,
+    Settings,
 }
 
 /// Attack animation categories for ASCII character filtering
@@ -148,6 +156,19 @@ pub struct App {
     pub active_animations: Vec<ActiveAnimation>,
     pub skill_tree_selection: Option<usize>, // For skill tree UI navigation
     pub previous_state: Option<AppState>,    // To track where we came from when opening skill tree
+    pub game_started_at: Option<Instant>,    // Track when current run started
+    pub death_time_elapsed: f32,             // Time elapsed when death occurred
+    pub levels_passed_before_death: u32,     // Levels completed before death
+    pub death_screen_fade_timer: f32,        // Fade animation timer
+    pub pause_menu_selection: usize,         // Current pause menu item selection
+    pub pause_submenu: Option<PauseSubmenu>, // Which submenu is open
+    pub pause_volume_selection: usize,       // Which volume is selected (0=music, 1=sound)
+    pub pause_settings_state: ListState,     // For settings menu navigation
+    pub pause_temp_settings: Settings,       // Temporary settings copy for pause menu
+    pub pause_rebinding_mode: SettingsMode,  // Rebinding mode for pause settings
+    pub music_volume: f32,                   // Music volume 0.0 - 1.0
+    pub sound_volume: f32,                   // Sound effects volume 0.0 - 1.0
+    pub audio_manager: AudioManager,         // Audio playback manager
 }
 
 impl App {
@@ -157,13 +178,19 @@ impl App {
         menu_s.select(Some(0));
         let mut set_s = ListState::default();
         set_s.select(Some(0));
+        let mut pause_s = ListState::default();
+        pause_s.select(Some(0));
 
         let now = Instant::now();
+        let mut audio_mgr = AudioManager::new();
+
+        // Start music with fade-in on app startup
+        let _ = audio_mgr.start_music_with_fade_in();
 
         Self {
             state: AppState::MainMenu,
             settings: s.clone(),
-            temp_settings: s,
+            temp_settings: s.clone(),
             settings_mode: SettingsMode::Navigating,
             main_menu_state: menu_s,
             settings_state: set_s,
@@ -199,6 +226,19 @@ impl App {
             active_animations: Vec::new(),
             skill_tree_selection: Some(0), // Initialize for skill tree UI
             previous_state: None,          // No previous state initially
+            game_started_at: None,
+            death_time_elapsed: 0.0,
+            levels_passed_before_death: 0,
+            death_screen_fade_timer: 0.0,
+            pause_menu_selection: 0,
+            pause_submenu: None,
+            pause_volume_selection: 0,
+            pause_settings_state: pause_s,
+            pause_temp_settings: s.clone(),
+            pause_rebinding_mode: SettingsMode::Navigating,
+            music_volume: 0.5,
+            sound_volume: 0.5,
+            audio_manager: audio_mgr,
         }
     }
 
@@ -299,6 +339,60 @@ impl App {
         } else {
             true
         }
+    }
+
+    /// Check if the player is dead and transition to death screen if necessary
+    pub fn check_and_handle_death(&mut self) {
+        if self.character.health <= 0 && self.state == AppState::Game {
+            // Record death stats
+            self.death_time_elapsed = if let Some(started_at) = self.game_started_at {
+                started_at.elapsed().as_secs_f32()
+            } else {
+                0.0
+            };
+            self.levels_passed_before_death = self.floor_level.saturating_sub(1);
+
+            // Reset fade timer for death screen animation
+            self.death_screen_fade_timer = 0.0;
+
+            // Transition to death screen
+            self.state = AppState::DeathScreen;
+        }
+    }
+
+    /// Restart the game with a fresh character and new floor
+    pub fn restart_game(&mut self) {
+        // Reset character
+        self.character = Character::default();
+        self.character_position = (0, 0);
+
+        // Reset game state
+        self.floor_level = 1;
+        self.current_floor = None;
+        self.dev_seed_input = String::new();
+        self.arrows.clear();
+        self.active_animations.clear();
+        self.particle_system = ParticleSystem::new();
+        self.is_paused = false;
+
+        // Reset stats
+        self.game_started_at = Some(Instant::now());
+        self.death_time_elapsed = 0.0;
+        self.levels_passed_before_death = 0;
+        self.death_screen_fade_timer = 0.0;
+
+        // Reset pause menu state
+        self.pause_menu_selection = 0;
+        self.pause_submenu = None;
+
+        // Generate new floor
+        self.regenerate_floor();
+
+        // Restart music with fade-in for new run
+        let _ = self.audio_manager.start_music_with_fade_in();
+
+        // Transition to game state
+        self.state = AppState::Game;
     }
 
     pub fn should_tick(&self) -> bool {
@@ -976,6 +1070,9 @@ impl App {
 
             for idx in dead_enemies.iter().rev() {
                 let enemy = floor.enemies.remove(*idx);
+                // Increment kill counter
+                self.character.enemies_killed += 1;
+
                 let enemy_x = enemy.position.x;
                 let enemy_y = enemy.position.y;
 
@@ -1034,6 +1131,9 @@ impl App {
         }
 
         self.particle_system.update();
+
+        // Check for player death
+        self.check_and_handle_death();
     }
 
     pub fn update_camera_smooth(&mut self) {

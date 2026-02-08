@@ -1,5 +1,6 @@
 pub mod arrow;
 pub mod attack_pattern;
+pub mod audio;
 pub mod boss;
 pub mod character;
 pub mod collision;
