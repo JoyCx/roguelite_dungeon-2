@@ -64,78 +64,11 @@ impl ItemDrop {
         }
     }
 
-    pub fn get_glyph(&self) -> char {
+    pub fn get_glyph(&self) -> &'static str {
         match &self.item_type {
-            ItemDropType::Consumable(c) => {
-                use crate::model::consumable::ConsumableType;
-                match c.consumable_type {
-                    ConsumableType::WeakHealingDraught => '◓',
-                    ConsumableType::BandageRoll => '⊞',
-                    ConsumableType::AntitoxinVial => '✕',
-                    ConsumableType::FireOilFlask => '◆',
-                    ConsumableType::BlessedBread => '☆',
-                }
-            }
-            ItemDropType::Gold(_) => '¤',
-            ItemDropType::Weapon(w) => {
-                use crate::model::weapon::WeaponType;
-                match w.weapon_type {
-                    WeaponType::Sword => match self.tier {
-                        ItemTier::Common => 's',
-                        ItemTier::Rare => '⚔',
-                        ItemTier::Epic => '⚡',
-                        ItemTier::Exotic => '✦',
-                        ItemTier::Legendary => '✦',
-                        ItemTier::Mythic => '§',
-                        ItemTier::Godly => '◈',
-                    },
-                    WeaponType::Bow => match self.tier {
-                        ItemTier::Common => 'b',
-                        ItemTier::Rare => '🏹',
-                        ItemTier::Epic => '⇄',
-                        ItemTier::Exotic => '⊳',
-                        ItemTier::Legendary => '⊳',
-                        ItemTier::Mythic => '◬',
-                        ItemTier::Godly => '◉',
-                    },
-                    WeaponType::Mace => match self.tier {
-                        ItemTier::Common => 'm',
-                        ItemTier::Rare => '⚒',
-                        ItemTier::Epic => '⚙',
-                        ItemTier::Exotic => '⊛',
-                        ItemTier::Legendary => '⊛',
-                        ItemTier::Mythic => '◉',
-                        ItemTier::Godly => '⊙',
-                    },
-                    WeaponType::Spear => match self.tier {
-                        ItemTier::Common => 'p',
-                        ItemTier::Rare => '⟡',
-                        ItemTier::Epic => '⤥',
-                        ItemTier::Exotic => '⊲',
-                        ItemTier::Legendary => '⊲',
-                        ItemTier::Mythic => '⦒',
-                        ItemTier::Godly => '⫷',
-                    },
-                    WeaponType::Axe => match self.tier {
-                        ItemTier::Common => 'a',
-                        ItemTier::Rare => '⛚',
-                        ItemTier::Epic => '⚔',
-                        ItemTier::Exotic => '⊬',
-                        ItemTier::Legendary => '⊬',
-                        ItemTier::Mythic => '◭',
-                        ItemTier::Godly => '◬',
-                    },
-                    WeaponType::Staff => match self.tier {
-                        ItemTier::Common => 'w',
-                        ItemTier::Rare => '†',
-                        ItemTier::Epic => '‡',
-                        ItemTier::Exotic => '⊕',
-                        ItemTier::Legendary => '⊕',
-                        ItemTier::Mythic => '◎',
-                        ItemTier::Godly => '☉',
-                    },
-                }
-            }
+            ItemDropType::Consumable(c) => c.consumable_type.get_glyph(),
+            ItemDropType::Gold(_) => "¤",
+            ItemDropType::Weapon(w) => w.weapon_type.get_glyph(),
         }
     }
 
@@ -149,14 +82,21 @@ impl ItemDrop {
 
     pub fn get_glyph_color(&self) -> ratatui::prelude::Color {
         use ratatui::prelude::Color;
-        match self.tier {
-            ItemTier::Common => Color::Gray,
-            ItemTier::Rare => Color::Blue,
-            ItemTier::Epic => Color::Magenta,
-            ItemTier::Exotic => Color::Yellow,
-            ItemTier::Legendary => Color::LightYellow,
-            ItemTier::Mythic => Color::Cyan,
-            ItemTier::Godly => Color::Red,
+        match &self.item_type {
+            // Consumables use function-aware coloring (not tier-based)
+            ItemDropType::Consumable(c) => c.consumable_type.get_color(),
+            // Gold is always gray
+            ItemDropType::Gold(_) => Color::DarkGray,
+            // Weapons use tier-based coloring
+            ItemDropType::Weapon(_) => match self.tier {
+                ItemTier::Common => Color::DarkGray,
+                ItemTier::Rare => Color::Cyan,
+                ItemTier::Epic => Color::Blue,
+                ItemTier::Exotic => Color::Yellow,
+                ItemTier::Legendary => Color::Rgb(255, 215, 0), // Gold
+                ItemTier::Mythic => Color::Rgb(255, 200, 80),   // Sunfire gold
+                ItemTier::Godly => Color::Rgb(255, 255, 210),   // Radiant white-gold
+            },
         }
     }
 

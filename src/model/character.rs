@@ -390,19 +390,22 @@ impl Character {
     /// Get effective attack damage with skill tree bonuses applied
     pub fn get_effective_attack_damage(&self) -> i32 {
         let bonuses = self.skill_tree_path.get_total_bonuses();
-        (self.attack_damage as f32 * bonuses.damage_multiplier) as i32
+        let multiplier = bonuses.damage_multiplier.max(1.0); // Ensure minimum 1.0x multiplier
+        (self.attack_damage as f32 * multiplier) as i32
     }
 
     /// Get effective max health with skill tree bonuses applied
     pub fn get_effective_max_health(&self) -> i32 {
         let bonuses = self.skill_tree_path.get_total_bonuses();
-        (self.health_max as f32 * bonuses.health_multiplier) as i32
+        let multiplier = bonuses.health_multiplier.max(1.0); // Ensure minimum 1.0x multiplier
+        (self.health_max as f32 * multiplier) as i32
     }
 
     /// Get effective speed with skill tree bonuses applied
     pub fn get_effective_speed(&self) -> f32 {
         let bonuses = self.skill_tree_path.get_total_bonuses();
-        self.speed * bonuses.speed_multiplier
+        let multiplier = bonuses.speed_multiplier.max(1.0); // Ensure minimum 1.0x multiplier
+        self.speed * multiplier
     }
 
     /// Apply skill tree stat bonuses to actual stats

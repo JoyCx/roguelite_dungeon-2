@@ -141,6 +141,7 @@ pub struct App {
     pub last_game_tick: Instant,
     pub game_tick_rate_ms: u128,
     pub floor_level: u32,
+    pub player_has_acted: bool, // Track if player has moved/attacked this level (gates enemy attacks)
     pub arrows: Vec<Arrow>,
     pub inventory_focused: bool,
     pub inventory_scroll_index: usize,
@@ -196,7 +197,7 @@ impl App {
             settings_state: set_s,
             should_quit: false,
             scroll_offset: 0,
-            is_auto_scrolling: true,
+            is_auto_scrolling: !s.skip_logo_animation,
             scroll_target: 60.0,
             last_scroll_offset: 0,
             start_time: now,
@@ -211,6 +212,7 @@ impl App {
             last_game_tick: now,
             game_tick_rate_ms: GAME_TICK_RATE_MS,
             floor_level: 1,
+            player_has_acted: false,
             arrows: Vec::new(),
             inventory_focused: false,
             inventory_scroll_index: 0,
@@ -283,7 +285,7 @@ impl App {
         }
 
         let distance = self.scroll_target - self.scroll_offset as f32;
-        let speed_factor = 0.05;
+        let speed_factor = crate::constants::LOGO_ANIMATION_SPEED;
 
         if distance.abs() > 0.5 {
             self.last_scroll_offset = self.scroll_offset;
@@ -313,6 +315,7 @@ impl App {
         floor.spawn_enemies(&difficulty);
 
         self.current_floor = Some(floor);
+        self.player_has_acted = false; // Reset action state for new level
 
         if let Some(floor) = &self.current_floor {
             if let Some((x, y)) = floor.find_player_spawn() {
@@ -335,7 +338,23 @@ impl App {
 
     pub fn is_walkable(&self, x: i32, y: i32) -> bool {
         if let Some(floor) = &self.current_floor {
-            floor.is_walkable(x, y)
+            // Hard boundary check - prevent any movement out of bounds
+            if x < 0 || x >= floor.width || y < 0 || y >= floor.height {
+                return false;
+            }
+
+            // Check if floor tile is walkable
+            if !floor.is_walkable(x, y) {
+                return false;
+            }
+
+            // Check if an enemy is at this position
+            for enemy in &floor.enemies {
+                if enemy.is_alive() && enemy.position.x == x && enemy.position.y == y {
+                    return false; // Can't walk into enemy
+                }
+            }
+            true
         } else {
             true
         }
@@ -368,6 +387,7 @@ impl App {
 
         // Reset game state
         self.floor_level = 1;
+        self.player_has_acted = false; // Reset action state for new level
         self.current_floor = None;
         self.dev_seed_input = String::new();
         self.arrows.clear();
@@ -419,11 +439,16 @@ impl App {
         let new_x = self.character_position.0 + dx;
         let new_y = self.character_position.1 + dy;
 
+        // Update direction regardless of movement success (allows turning in 1x1 blocks)
+        if dx != 0 || dy != 0 {
+            self.character.update_direction(dx, dy);
+        }
+
         if self.is_walkable(new_x, new_y) {
             self.character_position = (new_x, new_y);
-            self.character.update_direction(dx, dy);
             self.pickup_items();
             self.update_camera();
+            self.player_has_acted = true; // Player has moved - enable enemy attacks
             self.consume_tick();
         }
     }
@@ -485,17 +510,8 @@ impl App {
 
         // Start the attack cooldown
         self.character.start_attack_cooldown();
+        self.player_has_acted = true; // Player has attacked - enable enemy attacks
         self.consume_tick();
-
-        let msg = format!(
-            "\n=== ATTACK ===\nPosition: ({}, {})\nDirection: ({}, {})\n",
-            self.character_position.0, self.character_position.1, attack_dx, attack_dy,
-        );
-        let _ = std::fs::OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open("log.txt")
-            .and_then(|mut f| f.write_all(msg.as_bytes()));
     }
 
     // Helper to visualize patterns in dev menu without cooldowns/movement
@@ -544,10 +560,6 @@ impl App {
                 attack_dx,
                 attack_dy,
             );
-
-            if frames.is_empty() {
-                return vec![];
-            }
 
             // Find which frame should be displayed based on elapsed time
             let mut accumulated_time = 0.0;
@@ -805,7 +817,8 @@ impl App {
 
     pub fn update_camera(&mut self) {
         let vw = self.terminal_size.0 as f32;
-        let vh = self.terminal_size.1 as f32;
+        // Subtract 2 for the ultimate bar at the bottom (UI reserved space)
+        let vh = (self.terminal_size.1 as f32 - 2.0).max(1.0);
 
         let mut target_x = self.character_position.0 as f32 - vw / 2.0;
         let mut target_y = self.character_position.1 as f32 - vh / 2.0;
@@ -847,20 +860,56 @@ impl App {
         }
 
         if self.character.knockback_velocity != (0.0, 0.0) {
-            let (kb_x, kb_y) = self.character.knockback_velocity;
-            let new_x = (self.character_position.0 as f32 + kb_x).round() as i32;
-            let new_y = (self.character_position.1 as f32 + kb_y).round() as i32;
+            if let Some(floor) = &self.current_floor {
+                let (kb_x, kb_y) = self.character.knockback_velocity;
+                let new_x = (self.character_position.0 as f32 + kb_x).round() as i32;
+                let new_y = (self.character_position.1 as f32 + kb_y).round() as i32;
 
-            if self.is_walkable(new_x, new_y) {
-                self.character_position = (new_x, new_y);
-            }
+                // Clamp to map boundaries
+                let clamped_x = new_x.clamp(0, floor.width as i32 - 1);
+                let clamped_y = new_y.clamp(0, floor.height as i32 - 1);
 
-            self.character.knockback_velocity.0 *= 0.7;
-            self.character.knockback_velocity.1 *= 0.7;
-            if self.character.knockback_velocity.0.abs() < 0.1
-                && self.character.knockback_velocity.1.abs() < 0.1
-            {
-                self.character.knockback_velocity = (0.0, 0.0);
+                // Try to move to clamped position if it's walkable
+                if self.is_walkable(clamped_x, clamped_y) {
+                    self.character_position = (clamped_x, clamped_y);
+                    // If knocked out of bounds, zero out knockback in that direction
+                    if clamped_x != new_x {
+                        self.character.knockback_velocity.0 = 0.0;
+                    }
+                    if clamped_y != new_y {
+                        self.character.knockback_velocity.1 = 0.0;
+                    }
+                } else {
+                    // Try moving along each axis separately (respect directions)
+                    let can_move_x = self.is_walkable(clamped_x, self.character_position.1);
+                    let can_move_y = self.is_walkable(self.character_position.0, clamped_y);
+
+                    if can_move_x {
+                        self.character_position.0 = clamped_x;
+                        if clamped_x != new_x {
+                            self.character.knockback_velocity.0 = 0.0;
+                        }
+                    } else {
+                        self.character.knockback_velocity.0 = 0.0;
+                    }
+
+                    if can_move_y {
+                        self.character_position.1 = clamped_y;
+                        if clamped_y != new_y {
+                            self.character.knockback_velocity.1 = 0.0;
+                        }
+                    } else {
+                        self.character.knockback_velocity.1 = 0.0;
+                    }
+                }
+
+                self.character.knockback_velocity.0 *= 0.7;
+                self.character.knockback_velocity.1 *= 0.7;
+                if self.character.knockback_velocity.0.abs() < 0.1
+                    && self.character.knockback_velocity.1.abs() < 0.1
+                {
+                    self.character.knockback_velocity = (0.0, 0.0);
+                }
             }
         }
 
@@ -910,14 +959,43 @@ impl App {
                     let new_x = (enemy.position.x as f32 + kb_x).round() as i32;
                     let new_y = (enemy.position.y as f32 + kb_y).round() as i32;
 
-                    if new_x >= 0
-                        && new_x < floor.width as i32
-                        && new_y >= 0
-                        && new_y < floor.height as i32
-                        && walkable_tiles.contains(&(new_x, new_y))
-                    {
-                        enemy.position.x = new_x;
-                        enemy.position.y = new_y;
+                    // Clamp to map boundaries
+                    let clamped_x = new_x.clamp(0, floor.width as i32 - 1);
+                    let clamped_y = new_y.clamp(0, floor.height as i32 - 1);
+
+                    // Try to move to clamped position if it's walkable and not the player's position
+                    if (clamped_x, clamped_y) != (player_pos.x, player_pos.y) && walkable_tiles.contains(&(clamped_x, clamped_y)) {
+                        enemy.position.x = clamped_x;
+                        enemy.position.y = clamped_y;
+                        // If knocked out of bounds, zero out knockback in that direction
+                        if clamped_x != new_x {
+                            enemy.knockback_velocity.0 = 0.0;
+                        }
+                        if clamped_y != new_y {
+                            enemy.knockback_velocity.1 = 0.0;
+                        }
+                    } else {
+                        // Try moving along each axis separately (respect directions), avoiding player
+                        let can_move_x = (clamped_x, enemy.position.y) != (player_pos.x, player_pos.y) && walkable_tiles.contains(&(clamped_x, enemy.position.y));
+                        let can_move_y = (enemy.position.x, clamped_y) != (player_pos.x, player_pos.y) && walkable_tiles.contains(&(enemy.position.x, clamped_y));
+
+                        if can_move_x {
+                            enemy.position.x = clamped_x;
+                            if clamped_x != new_x {
+                                enemy.knockback_velocity.0 = 0.0;
+                            }
+                        } else {
+                            enemy.knockback_velocity.0 = 0.0;
+                        }
+
+                        if can_move_y {
+                            enemy.position.y = clamped_y;
+                            if clamped_y != new_y {
+                                enemy.knockback_velocity.1 = 0.0;
+                            }
+                        } else {
+                            enemy.knockback_velocity.1 = 0.0;
+                        }
                     }
 
                     enemy.knockback_velocity.0 *= 0.7;
@@ -937,40 +1015,44 @@ impl App {
                     );
                 }
 
-                enemy.movement_ticks += 1.0;
+                enemy.movement_ticks += enemy.speed; // Use enemy's speed for movement
                 enemy.attack_ticks += 1.0;
 
                 let distance = enemy.position.distance_to(&player_pos);
-                if distance > 1
-                    && distance <= enemy.detection_radius
-                    && enemy.movement_ticks
-                        >= crate::constants::ENEMY_MOVEMENT_TICKS_REQUIRED as f32
+                if distance > 1 && distance <= enemy.detection_radius && enemy.movement_ticks >= 1.0
+                // Use 1.0 threshold for consistency with speed
                 {
-                    enemy.movement_ticks = 0.0;
+                    enemy.movement_ticks -= 1.0; // Deduct movement cost
                     let dx = (player_pos.x - enemy.position.x).signum();
                     let dy = (player_pos.y - enemy.position.y).signum();
 
                     let new_x = enemy.position.x + dx;
                     let new_y = enemy.position.y + dy;
 
-                    if walkable_tiles.contains(&(new_x, new_y)) {
+                    // Check if target position is walkable AND not occupied by player
+                    if (new_x, new_y) != (player_pos.x, player_pos.y) && walkable_tiles.contains(&(new_x, new_y)) {
                         enemy.position.x = new_x;
                         enemy.position.y = new_y;
                     } else {
+                        // Try moving along each axis separately, but still avoid player
                         if dx != 0
+                            && (enemy.position.x + dx, enemy.position.y) != (player_pos.x, player_pos.y)
                             && walkable_tiles.contains(&(enemy.position.x + dx, enemy.position.y))
                         {
                             enemy.position.x += dx;
                         } else if dy != 0
+                            && (enemy.position.x, enemy.position.y + dy) != (player_pos.x, player_pos.y)
                             && walkable_tiles.contains(&(enemy.position.x, enemy.position.y + dy))
                         {
                             enemy.position.y += dy;
                         }
                     }
+                } else if distance > enemy.detection_radius {
+                    // Enemy is out of detection range - will wander in separate pass below
                 }
 
                 let distance = enemy.position.distance_to(&player_pos);
-                if distance <= 1 && enemy.attack_ticks >= 65.0 {
+                if distance <= 1 && enemy.attack_ticks >= 65.0 && self.player_has_acted {
                     enemy.attack_ticks = 0.0;
 
                     let rarity_damage = match enemy.rarity {
@@ -1039,10 +1121,57 @@ impl App {
                 }
             }
 
+            // Second pass: handle wandering for enemies out of detection range
+            for enemy in &mut floor.enemies {
+                if !enemy.is_alive() {
+                    continue;
+                }
+                let distance = enemy.position.distance_to(&player_pos);
+                if distance > enemy.detection_radius && enemy.movement_ticks >= 1.0 {
+                    // Inline wander behavior (single random direction instead of A*)
+                    enemy.movement_ticks -= 1.0; // Deduct movement cost based on speed
+                    enemy.is_wandering = true;
+
+                    let directions = [
+                        (0, -1), // up
+                        (0, 1),  // down
+                        (-1, 0), // left
+                        (1, 0),  // right
+                    ];
+
+                    use rand::seq::SliceRandom;
+                    let mut rng = rand::rng();
+                    let mut shuffled = directions.to_vec();
+                    shuffled.shuffle(&mut rng);
+
+                    for (dx, dy) in shuffled {
+                        let new_x = enemy.position.x + dx;
+                        let new_y = enemy.position.y + dy;
+
+                        // Prevent wandering into player's position
+                        if (new_x, new_y) == (player_pos.x, player_pos.y) {
+                            continue;
+                        }
+
+                        if new_x >= 0
+                            && new_x < floor.width as i32
+                            && new_y >= 0
+                            && new_y < floor.height as i32
+                            && walkable_tiles.contains(&(new_x, new_y))
+                        {
+                            enemy.position.x = new_x;
+                            enemy.position.y = new_y;
+                            break;
+                        }
+                    }
+                }
+            }
+
             let _player_pos = (
                 self.character_position.0 as f32,
                 self.character_position.1 as f32,
             );
+
             for idx in hit_enemy_indices {
                 if idx < floor.enemies.len() {
                     let damage = self.character.get_effective_attack_damage();

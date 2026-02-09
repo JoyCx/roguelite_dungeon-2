@@ -1,3 +1,4 @@
+use ratatui::prelude::Color;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Eq, PartialOrd, Ord, Default)]
@@ -34,6 +35,32 @@ impl ItemRarity {
             ItemRarity::Legendary => "🟠", // Orange
             ItemRarity::Mythic => "🔴",    // Red
             ItemRarity::Godly => "⭐",     // Star
+        }
+    }
+
+    /// Get rarity color for UI rendering (base fade progression)
+    pub fn get_color(&self) -> Color {
+        match self {
+            ItemRarity::Common => Color::DarkGray,
+            ItemRarity::Rare => Color::Cyan,
+            ItemRarity::Epic => Color::Blue,
+            ItemRarity::Exotic => Color::Yellow,
+            ItemRarity::Legendary => Color::Rgb(255, 215, 0), // True gold
+            ItemRarity::Mythic => Color::Rgb(255, 200, 80),   // Sunfire gold
+            ItemRarity::Godly => Color::Rgb(255, 255, 210),   // Radiant white-gold
+        }
+    }
+
+    /// Get fade/highlight color for animations
+    pub fn get_fade_color(&self) -> Color {
+        match self {
+            ItemRarity::Common => Color::Gray,
+            ItemRarity::Rare => Color::LightBlue,
+            ItemRarity::Epic => Color::LightBlue,
+            ItemRarity::Exotic => Color::LightYellow,
+            ItemRarity::Legendary => Color::Rgb(255, 240, 180),
+            ItemRarity::Mythic => Color::Rgb(255, 255, 160),
+            ItemRarity::Godly => Color::White,
         }
     }
 }

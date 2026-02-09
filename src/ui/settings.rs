@@ -3,6 +3,7 @@ use ratatui::{prelude::*, widgets::*};
 
 pub fn draw(f: &mut Frame, app: &mut App, area: Rect, pulse: Color) {
     let s = &app.temp_settings;
+    let skip_anim_check = if s.skip_logo_animation { "☑" } else { "☐" };
     let items = vec![
         format!("Move Up:         [{}]", s.move_up),
         format!("Move Left:       [{}]", s.move_left),
@@ -22,6 +23,7 @@ pub fn draw(f: &mut Frame, app: &mut App, area: Rect, pulse: Color) {
         format!("Default Difficulty: [{}]", s.default_difficulty.name()),
         format_volume_bar("Music Volume", s.music_volume),
         format_volume_bar("Sound Volume", s.sound_volume),
+        format!("Skip Logo Animation: {}", skip_anim_check),
         "-------------------".to_string(),
         "SAVE CHANGES".to_string(),
         "DISCARD & BACK".to_string(),
@@ -33,11 +35,11 @@ pub fn draw(f: &mut Frame, app: &mut App, area: Rect, pulse: Color) {
         .enumerate()
         .map(|(i, text)| {
             let mut style = Style::default().fg(Color::Gray);
-            if i == 19 {
+            if i == 20 {
                 style = style.fg(Color::Green);
-            } else if i == 20 {
-                style = style.fg(Color::Yellow);
             } else if i == 21 {
+                style = style.fg(Color::Yellow);
+            } else if i == 22 {
                 style = style.fg(Color::Red);
             }
             ListItem::new(text.as_str()).style(style)

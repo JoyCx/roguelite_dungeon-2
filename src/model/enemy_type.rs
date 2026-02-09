@@ -1,5 +1,6 @@
 use crate::model::attack_pattern::AttackPattern;
 use crate::model::item_tier::Difficulty;
+use ratatui::prelude::{Color, Modifier, Style};
 use serde::{Deserialize, Serialize};
 
 /// Enemy rarity determines number of attacks, ultimate availability, and buff spells
@@ -15,8 +16,7 @@ pub enum EnemyRarity {
 impl EnemyRarity {
     pub fn num_attacks(&self) -> usize {
         match self {
-            EnemyRarity::Fighter => 1,
-            EnemyRarity::Guard => 1,
+            EnemyRarity::Fighter | EnemyRarity::Guard => 1,
             EnemyRarity::Champion => 2,
             EnemyRarity::Elite => 3,
             EnemyRarity::Boss => 5,
@@ -64,11 +64,11 @@ impl EnemyRarity {
     /// Used to determine when enemy starts chasing the player
     pub fn base_detection_radius(&self) -> i32 {
         match self {
-            EnemyRarity::Fighter => 5,    // Weakest enemies have smallest radius
+            EnemyRarity::Fighter => 5, // Weakest enemies have smallest radius
             EnemyRarity::Guard => 6,
             EnemyRarity::Champion => 8,
             EnemyRarity::Elite => 10,
-            EnemyRarity::Boss => 15,      // Bosses can detect player from far away
+            EnemyRarity::Boss => 15, // Bosses can detect player from far away
         }
     }
 
@@ -82,11 +82,37 @@ impl EnemyRarity {
     /// Get unique ASCII art representation for this enemy type
     pub fn get_glyph(&self) -> char {
         match self {
-            EnemyRarity::Fighter => 'ƒ',      // Lowercase f with hook - simple fighter
-            EnemyRarity::Guard => 'Ψ',        // Psi symbol - protective stance
-            EnemyRarity::Champion => '◆',     // Diamond - stronger/more defined
-            EnemyRarity::Elite => '§',        // Section symbol - rare/prestigious
-            EnemyRarity::Boss => '❋',        // Heavy ornament - boss tier
+            EnemyRarity::Fighter => 'x',
+            EnemyRarity::Guard => '⛨',
+            EnemyRarity::Champion => '◆',
+            EnemyRarity::Elite => '☠',
+            EnemyRarity::Boss => '♛',
+        }
+    }
+
+    /// Get color for this enemy rarity (using "Blood & Shadow" palette)
+    pub fn get_color(&self) -> Color {
+        match self {
+            EnemyRarity::Fighter => Color::Red,                    // Standard red aggression
+            EnemyRarity::Guard => Color::Rgb(200, 50, 50),         // Deep crimson - feels armored
+            EnemyRarity::Champion => Color::Rgb(255, 0, 150),      // Vivid magenta - mechanical step up
+            EnemyRarity::Elite => Color::Rgb(140, 0, 255),         // Deep sinister purple - shadow magic
+            EnemyRarity::Boss => Color::Rgb(0, 255, 100),          // Neon acid green - calamity/contrast
+        }
+    }
+
+    /// Get text style for this enemy rarity with modifier for threat indication
+    pub fn get_style(&self) -> Style {
+        let base = Style::default()
+            .fg(self.get_color())
+            .add_modifier(Modifier::BOLD);
+
+        match self {
+            EnemyRarity::Elite | EnemyRarity::Boss => {
+                // Elites and Bosses get rapid blink to indicate high threat
+                base.add_modifier(Modifier::RAPID_BLINK)
+            }
+            _ => base,
         }
     }
 }
@@ -284,12 +310,12 @@ pub fn create_rotting_footsoldier() -> EnemyTemplate {
         description: "A former guard, armor fused to decayed flesh.".to_string(),
         rarity: EnemyRarity::Fighter,
         enemy_type: EnemyType::Undead,
-        health: 15,
+        health: 30,
         speed: 0.15,
         attacks: vec![EnemyAttack {
             name: "Rusted Slash".to_string(),
-            damage_min: 4,
-            damage_max: 6,
+            damage_min: 2,
+            damage_max: 4,
             attack_type: AttackType::Physical,
             reach: 1,
             area_radius: 0,
@@ -309,12 +335,12 @@ pub fn create_grave_scrabbler() -> EnemyTemplate {
         description: "A crawling corpse that drags itself with clawed fingers.".to_string(),
         rarity: EnemyRarity::Fighter,
         enemy_type: EnemyType::Undead,
-        health: 12,
+        health: 24,
         speed: 0.12,
         attacks: vec![EnemyAttack {
             name: "Bone Rake".to_string(),
-            damage_min: 3,
-            damage_max: 5,
+            damage_min: 2,
+            damage_max: 4,
             attack_type: AttackType::Physical,
             reach: 1,
             area_radius: 1,
@@ -334,12 +360,12 @@ pub fn create_whispering_shade() -> EnemyTemplate {
         description: "A thin silhouette of regret and rage.".to_string(),
         rarity: EnemyRarity::Fighter,
         enemy_type: EnemyType::Ghost,
-        health: 10,
+        health: 20,
         speed: 0.18,
         attacks: vec![EnemyAttack {
             name: "Chill Touch".to_string(),
-            damage_min: 3,
-            damage_max: 4,
+            damage_min: 2,
+            damage_max: 3,
             attack_type: AttackType::Magic,
             reach: 1,
             area_radius: 0,
@@ -363,12 +389,12 @@ pub fn create_crypt_sentinel() -> EnemyTemplate {
         description: "An animated suit of armor bound by runes.".to_string(),
         rarity: EnemyRarity::Guard,
         enemy_type: EnemyType::Undead,
-        health: 20,
+        health: 40,
         speed: 0.1,
         attacks: vec![EnemyAttack {
             name: "Shield Bash".to_string(),
-            damage_min: 5,
-            damage_max: 7,
+            damage_min: 3,
+            damage_max: 5,
             attack_type: AttackType::Physical,
             reach: 1,
             area_radius: 0,
@@ -388,12 +414,12 @@ pub fn create_tomb_watcher() -> EnemyTemplate {
         description: "A skeletal knight bound to protect the dead.".to_string(),
         rarity: EnemyRarity::Guard,
         enemy_type: EnemyType::Undead,
-        health: 18,
+        health: 36,
         speed: 0.12,
         attacks: vec![EnemyAttack {
             name: "Longspear Thrust".to_string(),
-            damage_min: 6,
-            damage_max: 8,
+            damage_min: 3,
+            damage_max: 5,
             attack_type: AttackType::Physical,
             reach: 2,
             area_radius: 0,
@@ -413,12 +439,12 @@ pub fn create_wailing_doorwarden() -> EnemyTemplate {
         description: "An incorporeal spirit fused to the dungeon walls.".to_string(),
         rarity: EnemyRarity::Guard,
         enemy_type: EnemyType::Ghost,
-        health: 14,
+        health: 28,
         speed: 0.14,
         attacks: vec![EnemyAttack {
             name: "Sonic Screech".to_string(),
-            damage_min: 4,
-            damage_max: 6,
+            damage_min: 2,
+            damage_max: 4,
             attack_type: AttackType::Magic,
             reach: 0,
             area_radius: 2,
@@ -442,13 +468,13 @@ pub fn create_blight_captain() -> EnemyTemplate {
         description: "A commanding corpse still barking silent orders.".to_string(),
         rarity: EnemyRarity::Champion,
         enemy_type: EnemyType::Undead,
-        health: 35,
+        health: 70,
         speed: 0.13,
         attacks: vec![
             EnemyAttack {
                 name: "Cleaving Strike".to_string(),
-                damage_min: 8,
-                damage_max: 12,
+                damage_min: 4,
+                damage_max: 7,
                 attack_type: AttackType::Physical,
                 reach: 1,
                 area_radius: 1,
@@ -459,8 +485,8 @@ pub fn create_blight_captain() -> EnemyTemplate {
             },
             EnemyAttack {
                 name: "Commanding Roar".to_string(),
-                damage_min: 5,
-                damage_max: 8,
+                damage_min: 2,
+                damage_max: 4,
                 attack_type: AttackType::Physical,
                 reach: 0,
                 area_radius: 3,
@@ -474,7 +500,7 @@ pub fn create_blight_captain() -> EnemyTemplate {
             name: "Blight Surge".to_string(),
             description: "Emits rot pulse in 3x3 area".to_string(),
             power_level: UltimatePower::Weak,
-            damage_base: 10,
+            damage_base: 6,
             area_radius: 3,
             cooldown_duration: 20.0,
             cooldown_remaining: 0.0,
@@ -491,13 +517,13 @@ pub fn create_veilbound_duelist() -> EnemyTemplate {
         description: "A spectral swordsman frozen mid-duel.".to_string(),
         rarity: EnemyRarity::Champion,
         enemy_type: EnemyType::Ghost,
-        health: 30,
+        health: 60,
         speed: 0.16,
         attacks: vec![
             EnemyAttack {
                 name: "Phantasmal Lunge".to_string(),
-                damage_min: 7,
-                damage_max: 10,
+                damage_min: 4,
+                damage_max: 6,
                 attack_type: AttackType::Magic,
                 reach: 2,
                 area_radius: 0,
@@ -508,8 +534,8 @@ pub fn create_veilbound_duelist() -> EnemyTemplate {
             },
             EnemyAttack {
                 name: "Fade Step".to_string(),
-                damage_min: 4,
-                damage_max: 6,
+                damage_min: 2,
+                damage_max: 4,
                 attack_type: AttackType::Magic,
                 reach: 0,
                 area_radius: 1,

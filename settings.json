@@ -17,5 +17,6 @@
   "default_difficulty": "Normal",
   "player_speed": 1.0,
   "music_volume": 0.5,
-  "sound_volume": 0.5
+  "sound_volume": 0.5,
+  "skip_logo_animation": false
 }

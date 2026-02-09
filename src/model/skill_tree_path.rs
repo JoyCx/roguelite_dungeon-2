@@ -68,11 +68,21 @@ pub struct SkillPathNode {
 }
 
 /// Stat bonuses applied by a skill path
-#[derive(Clone, Copy, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub struct StatBonus {
     pub health_multiplier: f32, // e.g., 1.15 = +15%
     pub damage_multiplier: f32, // e.g., 1.20 = +20%
     pub speed_multiplier: f32,  // e.g., 1.25 = +25%
+}
+
+impl Default for StatBonus {
+    fn default() -> Self {
+        StatBonus {
+            health_multiplier: 1.0,
+            damage_multiplier: 1.0,
+            speed_multiplier: 1.0,
+        }
+    }
 }
 
 impl SkillPathNode {

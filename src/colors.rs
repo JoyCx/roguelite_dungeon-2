@@ -85,25 +85,75 @@ impl Colors {
         Color::Yellow
     }
 
-    // Item colors
+    // Item colors (by rarity)
     pub fn item_common() -> Color {
-        Color::White
-    }
-
-    pub fn item_uncommon() -> Color {
-        Color::Green
+        Color::DarkGray
     }
 
     pub fn item_rare() -> Color {
-        Color::Blue
+        Color::Cyan
     }
 
     pub fn item_epic() -> Color {
-        Color::Magenta
+        Color::Blue
+    }
+
+    pub fn item_exotic() -> Color {
+        Color::Yellow
     }
 
     pub fn item_legendary() -> Color {
-        Color::Yellow
+        Color::Rgb(255, 215, 0) // True gold
+    }
+
+    pub fn item_mythic() -> Color {
+        Color::Rgb(255, 200, 80) // Sunfire gold
+    }
+
+    pub fn item_godly() -> Color {
+        Color::Rgb(255, 255, 210) // Radiant white-gold
+    }
+
+    // Consumable colors (by type/function)
+    pub fn consumable_weak_healing() -> Color {
+        Color::Rgb(255, 120, 120) // Light red
+    }
+
+    pub fn consumable_bandage() -> Color {
+        Color::Rgb(255, 160, 120) // Soft orange-red
+    }
+
+    pub fn consumable_blessed_bread() -> Color {
+        Color::Rgb(255, 200, 120) // Golden bread tone
+    }
+
+    pub fn consumable_antitoxin() -> Color {
+        Color::Rgb(120, 220, 180) // Green-cyan (medicinal)
+    }
+
+    pub fn consumable_fire_oil() -> Color {
+        Color::Rgb(255, 120, 40) // Hot ember orange
+    }
+
+    // Enemy colors (by rarity - "Blood & Shadow" palette)
+    pub fn enemy_fighter() -> Color {
+        Color::Red // Standard red aggression
+    }
+
+    pub fn enemy_guard() -> Color {
+        Color::Rgb(200, 50, 50) // Deep crimson
+    }
+
+    pub fn enemy_champion() -> Color {
+        Color::Rgb(255, 0, 150) // Vivid magenta
+    }
+
+    pub fn enemy_elite() -> Color {
+        Color::Rgb(140, 0, 255) // Deep sinister purple
+    }
+
+    pub fn enemy_boss() -> Color {
+        Color::Rgb(0, 255, 100) // Neon acid green
     }
 
     // Status effect colors

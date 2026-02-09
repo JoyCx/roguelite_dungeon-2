@@ -36,10 +36,10 @@ pub fn handle_settings_input(app: &mut App, key: crossterm::event::KeyEvent) {
     match app.settings_mode {
         crate::app::SettingsMode::Navigating => match key.code {
             KeyCode::Up | KeyCode::Char('w') | KeyCode::Char('W') => {
-                super::menu::move_selection_up(&mut app.settings_state, 22);
+                super::menu::move_selection_up(&mut app.settings_state, 23);
             }
             KeyCode::Down | KeyCode::Char('s') | KeyCode::Char('S') => {
-                super::menu::move_selection_down(&mut app.settings_state, 22);
+                super::menu::move_selection_down(&mut app.settings_state, 23);
             }
             KeyCode::Left | KeyCode::Char('a') | KeyCode::Char('A') => {
                 let sel = app.settings_state.selected().unwrap_or(0);
@@ -324,7 +324,11 @@ fn handle_settings_selection(app: &mut App) {
             // Volume sliders - just navigable with Left/Right arrows
             // No action needed on Enter
         }
-        19 => {
+        18 => {
+            // Skip logo animation toggle
+            app.temp_settings.skip_logo_animation = !app.temp_settings.skip_logo_animation;
+        }
+        20 => {
             // Save changes
             app.settings = app.temp_settings.clone();
             // Sync volume to app and audio manager
@@ -334,12 +338,12 @@ fn handle_settings_selection(app: &mut App) {
             let _ = app.settings.save();
             app.state = AppState::MainMenu;
         }
-        20 => {
+        21 => {
             // Discard and back
             app.temp_settings = app.settings.clone();
             app.state = AppState::MainMenu;
         }
-        21 => {
+        22 => {
             // Reset to default settings
             app.settings = Settings::default();
             app.temp_settings = app.settings.clone();

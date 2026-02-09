@@ -12,10 +12,25 @@ pub enum FadeState {
     FadingOut { current_time: f32, duration: f32 },
 }
 
+#[derive(Clone, Copy, Debug)]
+pub enum SoundEffect {
+    Hit,
+    Damaged,
+    Death,
+    PickedUpItem,
+    KilledEnemy,
+    AdvanceLevel,
+    MenuClick,
+}
+
 /// Audio manager for handling music and sound effects using rodio
 pub struct AudioManager {
     sink: Option<Arc<Mutex<Sink>>>,
     _stream: Option<Box<OutputStream>>,
+    // Separate sink and stream for sound effects (so SFX and music volumes are independent)
+    effects_sink: Option<Arc<Mutex<Sink>>>,
+    _effects_stream: Option<Box<OutputStream>>,
+
     music_volume: f32,
     sound_volume: f32,
     target_volume: f32,
@@ -23,7 +38,6 @@ pub struct AudioManager {
     music_files: Vec<PathBuf>,
     current_file_index: usize,
 }
-
 impl AudioManager {
     pub fn new() -> Self {
         // Load all MP3 files from audio/music folder
@@ -32,7 +46,9 @@ impl AudioManager {
         Self {
             sink: None,
             _stream: None,
-            music_volume: 0.0,  // Start at 0 for fade-in
+            effects_sink: None,
+            _effects_stream: None,
+            music_volume: 0.0, // Start at 0 for fade-in
             sound_volume: 0.5,
             target_volume: 0.5,
             fade_state: FadeState::None,
@@ -121,7 +137,7 @@ impl AudioManager {
             current_time: 0.0,
             duration,
         };
-        self.target_volume = 0.1;  // Lower target for muffled effect
+        self.target_volume = 0.1; // Lower target for muffled effect
     }
 
     /// Start fade-in transition
@@ -176,7 +192,8 @@ impl AudioManager {
                 } else {
                     // Interpolate volume (fade out from current to target)
                     let progress = current_time / duration;
-                    self.music_volume = self.target_volume + (1.0 - progress) * (0.5 - self.target_volume);
+                    self.music_volume =
+                        self.target_volume + (1.0 - progress) * (0.5 - self.target_volume);
                 }
 
                 // Apply current volume

@@ -433,7 +433,7 @@ pub fn render_horizontal_ultimate_bar(f: &mut Frame, area: Rect, charge: f32) {
 pub fn render_items(
     f: &mut Frame,
     game_area: Rect,
-    items: &[(i32, i32, char, Color)],
+    items: &[(i32, i32, &str, Color)],
     camera_x: i32,
     camera_y: i32,
 ) {

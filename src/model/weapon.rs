@@ -13,6 +13,20 @@ pub enum WeaponType {
     Staff,
 }
 
+impl WeaponType {
+    /// Get consistent glyph for this weapon type (applies across all rarities)
+    pub fn get_glyph(&self) -> &'static str {
+        match self {
+            WeaponType::Sword => "🗡️",
+            WeaponType::Bow => "🏹",
+            WeaponType::Mace => "🔨",
+            WeaponType::Spear => "⚜️",
+            WeaponType::Axe => "🪓",
+            WeaponType::Staff => "⚚",
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum EnchantType {
     DamageIncrease,

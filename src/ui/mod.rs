@@ -129,7 +129,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
 
             // Render items on the floor
             if let Some(floor) = &app.current_floor {
-                let items: Vec<(i32, i32, char, Color)> = floor
+                let items: Vec<(i32, i32, &str, Color)> = floor
                     .items
                     .iter()
                     .map(|item| (item.x, item.y, item.get_glyph(), item.get_glyph_color()))
@@ -149,11 +149,11 @@ pub fn draw(f: &mut Frame, app: &mut App) {
                             Color::Red
                         } else {
                             match enemy.rarity {
-                                crate::model::enemy_type::EnemyRarity::Fighter => Color::Gray,
+                                crate::model::enemy_type::EnemyRarity::Fighter => Color::White,
                                 crate::model::enemy_type::EnemyRarity::Guard => Color::Green,
-                                crate::model::enemy_type::EnemyRarity::Champion => Color::Cyan,
-                                crate::model::enemy_type::EnemyRarity::Elite => Color::Magenta,
-                                crate::model::enemy_type::EnemyRarity::Boss => Color::Red,
+                                crate::model::enemy_type::EnemyRarity::Champion => Color::Yellow,
+                                crate::model::enemy_type::EnemyRarity::Elite => Color::LightRed,
+                                crate::model::enemy_type::EnemyRarity::Boss => Color::LightMagenta,
                             }
                         };
                         let glyph = enemy.rarity.get_glyph();

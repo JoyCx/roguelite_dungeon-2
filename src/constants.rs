@@ -20,7 +20,7 @@ pub const ITEMS_PER_FLOOR: usize = 10;
 pub const ENEMY_SPAWN_RADIUS: i32 = 20;
 
 // Combat
-pub const PLAYER_BASE_DAMAGE: i32 = 5;
+pub const PLAYER_BASE_DAMAGE: i32 = 10;
 pub const PLAYER_ATTACK_COOLDOWN: f32 = 0.5;
 pub const PLAYER_BOW_COOLDOWN: f32 = 0.3;
 pub const PLAYER_DASH_COOLDOWN: f32 = 5.0;
@@ -48,6 +48,7 @@ pub const FIRE_OIL_IMPACT_RADIUS: i32 = 4;
 pub const CAMERA_SMOOTH_FACTOR: f32 = 0.1;
 
 // UI
+pub const LOGO_ANIMATION_SPEED: f32 = 0.05; // Lower = slower animation (0.05 = ~2s, 0.01 = ~10s)
 pub const HEALTH_BAR_WIDTH: u16 = 20;
 pub const INVENTORY_MAX_ITEMS: usize = 5;
 

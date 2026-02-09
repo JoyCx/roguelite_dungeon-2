@@ -1,3 +1,4 @@
+use ratatui::prelude::Color;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -7,6 +8,43 @@ pub enum ConsumableType {
     AntitoxinVial,      // Removes poison + immunity
     FireOilFlask,       // Throw damage + burn
     BlessedBread,       // Slow healing over 8 sec
+}
+
+impl ConsumableType {
+    /// Get consistent glyph for this consumable type
+    pub fn get_glyph(&self) -> &'static str {
+        match self {
+            ConsumableType::WeakHealingDraught => "❤️‍🩹",
+            ConsumableType::BandageRoll => "🩹",
+            ConsumableType::AntitoxinVial => "🧪",
+            ConsumableType::FireOilFlask => "🍾",
+            ConsumableType::BlessedBread => "🍞",
+        }
+    }
+
+    /// Get color for this consumable type (function-aware coloring)
+    pub fn get_color(&self) -> Color {
+        match self {
+            // Healing items: warm red to gold gradient
+            ConsumableType::WeakHealingDraught => Color::Rgb(255, 120, 120), // Light red
+            ConsumableType::BandageRoll => Color::Rgb(255, 160, 120),        // Soft orange-red
+            ConsumableType::BlessedBread => Color::Rgb(255, 200, 120),       // Golden bread tone
+            // Utility items: distinct colors for their function
+            ConsumableType::AntitoxinVial => Color::Rgb(120, 220, 180), // Green-cyan (medicinal)
+            ConsumableType::FireOilFlask => Color::Rgb(255, 120, 40),   // Hot ember orange
+        }
+    }
+
+    /// Get fade color for animations
+    pub fn get_fade_color(&self) -> Color {
+        match self {
+            ConsumableType::WeakHealingDraught => Color::Rgb(255, 180, 120),
+            ConsumableType::BandageRoll => Color::Rgb(255, 210, 140),
+            ConsumableType::BlessedBread => Color::Rgb(255, 240, 160),
+            ConsumableType::AntitoxinVial => Color::Rgb(180, 255, 220), // Lighter, cleaner
+            ConsumableType::FireOilFlask => Color::Rgb(255, 200, 80),   // Lighter orange/gold
+        }
+    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
