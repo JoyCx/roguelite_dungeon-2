@@ -392,25 +392,10 @@ pub fn handle_dev_menu_input(app: &mut App, key: crossterm::event::KeyEvent) {
             if let Some(floor) = &app.current_floor {
                 // Find a walkable starting position
                 if let Some((x, y)) = floor.find_walkable_tile() {
-                    use std::io::Write;
-                    let msg = format!("Starting position: ({}, {})\n", x, y);
-                    let _ = std::fs::OpenOptions::new()
-                        .create(true)
-                        .append(true)
-                        .open("log.txt")
-                        .and_then(|mut f| f.write_all(msg.as_bytes()));
-
                     app.character_position = (x, y);
                     app.update_camera(); // Initialize camera position
                     app.game_started_at = Some(std::time::Instant::now());
                     app.state = AppState::Game;
-                } else {
-                    use std::io::Write;
-                    let _ = std::fs::OpenOptions::new()
-                        .create(true)
-                        .append(true)
-                        .open("log.txt")
-                        .and_then(|mut f| f.write_all(b"ERROR: No walkable tile found!\n"));
                 }
             }
         }
