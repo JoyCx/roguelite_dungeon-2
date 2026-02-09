@@ -1,4 +1,5 @@
 use crate::app::{App, AppState};
+use crate::model::audio::SoundEffect;
 use crate::model::settings::Settings;
 use crossterm::event::KeyCode;
 
@@ -9,25 +10,30 @@ pub fn handle_main_menu_input(app: &mut App, key: crossterm::event::KeyEvent) {
     match key.code {
         KeyCode::Up | KeyCode::Char('w') | KeyCode::Char('W') => {
             super::menu::move_selection_up(&mut app.main_menu_state, 5);
+            app.audio_manager.play_sound_effect(SoundEffect::MenuClick);
         }
         KeyCode::Down | KeyCode::Char('s') | KeyCode::Char('S') => {
             super::menu::move_selection_down(&mut app.main_menu_state, 5);
+            app.audio_manager.play_sound_effect(SoundEffect::MenuClick);
         }
-        KeyCode::Enter | KeyCode::Char(' ') => match app.main_menu_state.selected() {
-            Some(0) => {
-                // Start Game - go to character creation
-                app.state = AppState::CharacterCreation;
-                app.char_name = String::new();
-                app.char_name_input_mode = true;
-                app.char_creation_selection = 0;
-                // Load default difficulty from settings
-                app.settings.difficulty = app.settings.default_difficulty.clone();
+        KeyCode::Enter | KeyCode::Char(' ') => {
+            app.audio_manager.play_sound_effect(SoundEffect::MenuClick);
+            match app.main_menu_state.selected() {
+                Some(0) => {
+                    // Start Game - go to character creation
+                    app.state = AppState::CharacterCreation;
+                    app.char_name = String::new();
+                    app.char_name_input_mode = true;
+                    app.char_creation_selection = 0;
+                    // Load default difficulty from settings
+                    app.settings.difficulty = app.settings.default_difficulty.clone();
+                }
+                Some(2) => app.state = AppState::Settings,
+                Some(3) => app.state = AppState::DevMenu,
+                Some(4) => app.should_quit = true,
+                _ => {}
             }
-            Some(2) => app.state = AppState::Settings,
-            Some(3) => app.state = AppState::DevMenu,
-            Some(4) => app.should_quit = true,
-            _ => {}
-        },
+        }
         _ => {}
     }
 }
@@ -37,9 +43,11 @@ pub fn handle_settings_input(app: &mut App, key: crossterm::event::KeyEvent) {
         crate::app::SettingsMode::Navigating => match key.code {
             KeyCode::Up | KeyCode::Char('w') | KeyCode::Char('W') => {
                 super::menu::move_selection_up(&mut app.settings_state, 23);
+                app.audio_manager.play_sound_effect(SoundEffect::MenuClick);
             }
             KeyCode::Down | KeyCode::Char('s') | KeyCode::Char('S') => {
                 super::menu::move_selection_down(&mut app.settings_state, 23);
+                app.audio_manager.play_sound_effect(SoundEffect::MenuClick);
             }
             KeyCode::Left | KeyCode::Char('a') | KeyCode::Char('A') => {
                 let sel = app.settings_state.selected().unwrap_or(0);
@@ -47,11 +55,13 @@ pub fn handle_settings_input(app: &mut App, key: crossterm::event::KeyEvent) {
                 if sel == 16 {
                     app.temp_settings.music_volume =
                         (app.temp_settings.music_volume - 0.05).max(0.0);
+                    app.audio_manager.play_sound_effect(SoundEffect::MenuClick);
                 }
                 // Sound volume
                 else if sel == 17 {
                     app.temp_settings.sound_volume =
                         (app.temp_settings.sound_volume - 0.05).max(0.0);
+                    app.audio_manager.play_sound_effect(SoundEffect::MenuClick);
                 }
             }
             KeyCode::Right | KeyCode::Char('d') | KeyCode::Char('D') => {
@@ -60,19 +70,23 @@ pub fn handle_settings_input(app: &mut App, key: crossterm::event::KeyEvent) {
                 if sel == 16 {
                     app.temp_settings.music_volume =
                         (app.temp_settings.music_volume + 0.05).min(1.0);
+                    app.audio_manager.play_sound_effect(SoundEffect::MenuClick);
                 }
                 // Sound volume
                 else if sel == 17 {
                     app.temp_settings.sound_volume =
                         (app.temp_settings.sound_volume + 0.05).min(1.0);
+                    app.audio_manager.play_sound_effect(SoundEffect::MenuClick);
                 }
             }
             KeyCode::PageUp => app.set_scroll(app.scroll_offset.saturating_sub(5)),
             KeyCode::PageDown => app.set_scroll(app.scroll_offset.saturating_add(5)),
             KeyCode::Enter | KeyCode::Char(' ') => {
+                app.audio_manager.play_sound_effect(SoundEffect::MenuClick);
                 handle_settings_selection(app);
             }
             KeyCode::Esc => {
+                app.audio_manager.play_sound_effect(SoundEffect::MenuClick);
                 app.temp_settings = app.settings.clone();
                 app.state = AppState::MainMenu;
             }
@@ -81,6 +95,7 @@ pub fn handle_settings_input(app: &mut App, key: crossterm::event::KeyEvent) {
         crate::app::SettingsMode::Rebinding => {
             // Escape cancels rebinding without saving
             if key.code == KeyCode::Esc {
+                app.audio_manager.play_sound_effect(SoundEffect::MenuClick);
                 app.settings_mode = crate::app::SettingsMode::Navigating;
                 return;
             }
@@ -108,6 +123,7 @@ pub fn handle_settings_input(app: &mut App, key: crossterm::event::KeyEvent) {
                 13 => app.temp_settings.special_item = k,
                 _ => {}
             }
+            app.audio_manager.play_sound_effect(SoundEffect::MenuClick);
             app.settings_mode = crate::app::SettingsMode::Navigating;
         }
     }

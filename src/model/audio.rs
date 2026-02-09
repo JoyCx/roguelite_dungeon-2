@@ -1,4 +1,5 @@
 use rodio::{Decoder, OutputStream, Sink, Source};
+use std::collections::HashMap;
 use std::fs::{self, File};
 use std::io::BufReader;
 use std::path::PathBuf;
@@ -12,7 +13,7 @@ pub enum FadeState {
     FadingOut { current_time: f32, duration: f32 },
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Hash, Eq, PartialEq)]
 pub enum SoundEffect {
     Hit,
     Damaged,
@@ -21,6 +22,31 @@ pub enum SoundEffect {
     KilledEnemy,
     AdvanceLevel,
     MenuClick,
+}
+
+impl SoundEffect {
+    /// Get the file path for this sound effect in audio/sfx/
+    pub fn file_name(&self) -> &'static str {
+        match self {
+            SoundEffect::Hit => "hit.wav",
+            SoundEffect::Damaged => "damaged.wav",
+            SoundEffect::Death => "death.wav",
+            SoundEffect::PickedUpItem => "PickedUpItem.mp3",
+            SoundEffect::KilledEnemy => "kill.wav",
+            SoundEffect::AdvanceLevel => "AdvanceLevel.mp3",
+            SoundEffect::MenuClick => "MenuClick.mp3",
+        }
+    }
+
+    pub fn full_path(&self) -> PathBuf {
+        PathBuf::from("audio/sfx").join(self.file_name())
+    }
+}
+
+/// Cached sound effect data
+#[derive(Clone)]
+struct CachedSoundEffect {
+    data: Arc<Vec<u8>>,
 }
 
 /// Audio manager for handling music and sound effects using rodio
@@ -37,13 +63,14 @@ pub struct AudioManager {
     fade_state: FadeState,
     music_files: Vec<PathBuf>,
     current_file_index: usize,
+    /// Cache of loaded sound effects to avoid file I/O on every play
+    sfx_cache: HashMap<SoundEffect, CachedSoundEffect>,
 }
 impl AudioManager {
     pub fn new() -> Self {
         // Load all MP3 files from audio/music folder
         let music_files = Self::load_music_files();
-
-        Self {
+        let mut manager = Self {
             sink: None,
             _stream: None,
             effects_sink: None,
@@ -54,7 +81,13 @@ impl AudioManager {
             fade_state: FadeState::None,
             music_files,
             current_file_index: 0,
-        }
+            sfx_cache: HashMap::new(),
+        };
+
+        // Pre-load all sound effects into cache
+        manager.preload_sound_effects();
+
+        manager
     }
 
     /// Load all MP3 files from audio/music directory
@@ -82,6 +115,60 @@ impl AudioManager {
         }
 
         files
+    }
+
+    /// Pre-load all sound effects into memory cache for fast playback
+    fn preload_sound_effects(&mut self) {
+        let effects = [
+            SoundEffect::Hit,
+            SoundEffect::Damaged,
+            SoundEffect::Death,
+            SoundEffect::PickedUpItem,
+            SoundEffect::KilledEnemy,
+            SoundEffect::AdvanceLevel,
+            SoundEffect::MenuClick,
+        ];
+
+        for effect in &effects {
+            let path = effect.full_path();
+            if let Ok(data) = fs::read(&path) {
+                self.sfx_cache.insert(
+                    *effect,
+                    CachedSoundEffect {
+                        data: Arc::new(data),
+                    },
+                );
+            }
+        }
+    }
+
+    /// Play a sound effect using cached data (safe, non-blocking, low overhead)
+    pub fn play_sound_effect(&mut self, effect: SoundEffect) {
+        // Check if we have the effect cached
+        if let Some(cached) = self.sfx_cache.get(&effect) {
+            // Ensure we have an effects stream and sink
+            if self.effects_sink.is_none() {
+                if let Ok(mut stream) = rodio::OutputStreamBuilder::open_default_stream() {
+                    stream.log_on_drop(false);
+                    let sink = Sink::connect_new(stream.mixer());
+                    self.effects_sink = Some(Arc::new(Mutex::new(sink)));
+                    self._effects_stream = Some(Box::new(stream));
+                }
+            }
+
+            // If we have a sink, play the sound
+            if let Some(sink) = &self.effects_sink {
+                // Create a cursor from cached data to avoid file I/O
+                let cursor = std::io::Cursor::new(cached.data.as_ref().clone());
+                if let Ok(source) = Decoder::new(cursor) {
+                    if let Ok(sink_guard) = sink.lock() {
+                        // Apply sound volume
+                        sink_guard.set_volume(self.sound_volume);
+                        sink_guard.append(source);
+                    }
+                }
+            }
+        }
     }
 
     /// Start playing music with fade-in
@@ -236,6 +323,13 @@ impl AudioManager {
     /// Set sound effects volume (0.0 to 1.0)
     pub fn set_sound_volume(&mut self, volume: f32) {
         self.sound_volume = volume.clamp(0.0, 1.0);
+
+        // Apply volume to effects sink if it exists
+        if let Some(sink) = &self.effects_sink {
+            if let Ok(sink_guard) = sink.lock() {
+                sink_guard.set_volume(self.sound_volume);
+            }
+        }
     }
 
     /// Get current sound effects volume

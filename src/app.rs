@@ -1,7 +1,7 @@
 use crate::constants::GAME_TICK_RATE_MS;
 use crate::model::arrow::Arrow;
 use crate::model::attack_pattern::AnimationFrame; //
-use crate::model::audio::AudioManager;
+use crate::model::audio::{AudioManager, SoundEffect};
 use crate::model::character::Character;
 use crate::model::floor::Floor;
 use crate::model::gamesave::{GameSave, PlayerStats};
@@ -737,13 +737,16 @@ impl App {
                     match item.item_type {
                         ItemDropType::Consumable(consumable) => {
                             self.character.consumable_inventory.add(consumable);
+                            self.audio_manager.play_sound_effect(SoundEffect::PickedUpItem);
                         }
                         ItemDropType::Gold(amount) => {
                             self.character.add_gold(amount);
+                            self.audio_manager.play_sound_effect(SoundEffect::PickedUpItem);
                         }
                         ItemDropType::Weapon(weapon) => {
                             if self.character.weapon_inventory.weapons.len() < 9 {
                                 self.character.weapon_inventory.add_weapon(weapon);
+                                self.audio_manager.play_sound_effect(SoundEffect::PickedUpItem);
                             } else {
                                 let weapon_item =
                                     crate::model::item::ItemDrop::weapon(weapon, char_x, char_y);
@@ -857,6 +860,7 @@ impl App {
         let damage = (self.character.status_effects.get_total_damage_per_sec() * delta) as i32;
         if damage > 0 {
             self.character.take_damage(damage);
+            self.audio_manager.play_sound_effect(SoundEffect::Damaged);
         }
 
         if self.character.knockback_velocity != (0.0, 0.0) {
@@ -1187,6 +1191,8 @@ impl App {
 
                     floor.enemies[idx].apply_knockback(dx, dy, knockback_force);
                     floor.enemies[idx].take_damage(damage);
+                    // Play hit sound when enemy is damaged
+                    self.audio_manager.play_sound_effect(SoundEffect::Hit);
                 }
             }
 
@@ -1199,6 +1205,8 @@ impl App {
 
             for idx in dead_enemies.iter().rev() {
                 let enemy = floor.enemies.remove(*idx);
+                // Play death sound when enemy is killed
+                self.audio_manager.play_sound_effect(SoundEffect::Death);
                 // Increment kill counter
                 self.character.enemies_killed += 1;
 
@@ -1257,12 +1265,24 @@ impl App {
         for (attack_damage, dx, dy) in attacks_on_player {
             self.character.apply_knockback(dx, dy, 0.5);
             self.character.take_damage(attack_damage);
+            self.audio_manager.play_sound_effect(SoundEffect::Damaged);
         }
 
         self.particle_system.update();
 
         // Check for player death
         self.check_and_handle_death();
+
+        // Check if all enemies on current floor are defeated - advance to next floor
+        if let Some(floor) = &self.current_floor {
+            if floor.enemies.is_empty() && self.player_has_acted {
+                // All enemies defeated - play level advance sound and regenerate floor
+                self.audio_manager.play_sound_effect(SoundEffect::AdvanceLevel);
+                self.floor_level += 1;
+                self.player_has_acted = false;
+                self.regenerate_floor();
+            }
+        }
     }
 
     pub fn update_camera_smooth(&mut self) {
