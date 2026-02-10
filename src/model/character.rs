@@ -5,6 +5,7 @@ use crate::model::skill::{SkillTree, SkillType};
 use crate::model::skill_tree_path::SkillTreeManager;
 use crate::model::status_effect::{StatusEffect, StatusEffectManager, StatusEffectType};
 use crate::model::ultimate::Ultimate;
+use crate::model::ultimate_shop::UltimateShopInventory;
 use crate::model::weapon::WeaponInventory;
 use std::time::Instant;
 
@@ -54,6 +55,9 @@ pub struct Character {
     // Ultimate charge (0.0 to 100.0)
     pub ultimate_charge: f32,
 
+    // Ultimate Shop Inventory (owned ultimates and upgrades)
+    pub shop_inventory: UltimateShopInventory,
+
     // Skill Tree
     pub skill_tree: SkillTree,
 
@@ -71,7 +75,7 @@ pub struct Character {
     pub damaged_at: Option<Instant>,    // timestamp of when entity was last damaged
 }
 
-impl Default for Character {
+        impl Default for Character {
     fn default() -> Self {
         Self {
             speed: PLAYER_BASE_SPEED,
@@ -94,6 +98,7 @@ impl Default for Character {
             status_effects: StatusEffectManager::default(),
             ultimate: Ultimate::default(),
             ultimate_charge: 0.0,
+            shop_inventory: UltimateShopInventory::default(),
             skill_tree: SkillTree::new(),
             skill_tree_path: SkillTreeManager::new(),
             gold: 0,

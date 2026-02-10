@@ -551,7 +551,7 @@ impl Weapon {
 
     /// Generate a random weapon of a given rarity tier
     pub fn random_for_rarity(rarity: &ItemTier) -> Self {
-        use rand::Rng;
+        use rand::{Rng, RngExt};
         let mut rng = rand::rng();
 
         match rarity {

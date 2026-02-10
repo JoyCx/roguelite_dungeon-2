@@ -214,7 +214,7 @@ pub fn handle_input(app: &mut App, key: crossterm::event::KeyCode) {
     match key {
         KeyCode::Char('r') | KeyCode::Char('R') => {
             // Random seed
-            use rand::Rng;
+            use rand::{Rng, RngExt};
             let mut rng = rand::rng();
             let seed = rng.random::<u64>();
             app.dev_seed_input = seed.to_string();
@@ -266,7 +266,7 @@ pub fn handle_input(app: &mut App, key: crossterm::event::KeyCode) {
 
 /// Find an empty position to spawn a test enemy
 fn find_empty_spawn_position(floor: &crate::model::floor::Floor) -> Option<(i32, i32)> {
-    use rand::Rng;
+    use rand::{Rng, RngExt};
     let mut rng = rand::rng();
 
     for _ in 0..100 {
@@ -294,7 +294,7 @@ fn spawn_test_enemy(
         return;
     }
 
-    use rand::Rng;
+    use rand::{Rng, RngExt};
     let mut rng = rand::rng();
     let template = templates[rng.random_range(0..templates.len())].clone();
 

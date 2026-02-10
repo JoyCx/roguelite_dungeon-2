@@ -305,6 +305,11 @@ pub fn handle_game_input(app: &mut App, key: crossterm::event::KeyEvent) {
                 app.state = AppState::SkillTree;
                 app.is_paused = true; // Automatically pause the game
                 app.skill_tree_selection = Some(0);
+            } else if key.code == KeyCode::Char('y') || key.code == KeyCode::Char('Y') {
+                // Open ultimate shop during gameplay
+                app.previous_state = Some(AppState::Game);
+                app.state = AppState::UltimateShop;
+                app.is_paused = true; // Automatically pause the game
             }
         }
     }
@@ -604,5 +609,120 @@ pub fn handle_skill_tree_input(app: &mut App, key: crossterm::event::KeyEvent) {
             }
         }
         _ => {}
+    }
+}
+
+pub fn handle_ultimate_shop_input(app: &mut App, key: crossterm::event::KeyEvent) {
+    use crate::model::ultimate_shop::StatUpgradeType;
+
+    match key.code {
+        KeyCode::Up | KeyCode::Char('w') | KeyCode::Char('W') => {
+            app.ultimate_shop_ui.previous();
+            app.audio_manager.play_sound_effect(SoundEffect::MenuSwitch);
+        }
+        KeyCode::Down | KeyCode::Char('s') | KeyCode::Char('S') => {
+            app.ultimate_shop_ui.next();
+            app.audio_manager.play_sound_effect(SoundEffect::MenuSwitch);
+        }
+        KeyCode::Tab => {
+            app.ultimate_shop_ui.switch_tab();
+            app.audio_manager.play_sound_effect(SoundEffect::MenuSwitch);
+        }
+        KeyCode::Enter | KeyCode::Char(' ') => {
+            match app.ultimate_shop_ui.selected_tab {
+                crate::ui::ultimate_shop::ShopTab::Ultimates => {
+                    if let Some(idx) = app.ultimate_shop_ui.ultimate_list_state.selected() {
+                        if let Some(shop_ult) = app.ultimate_shop.ultimates.get(idx) {
+                            let result = app.ultimate_shop.purchase_ultimate(
+                                &mut app.character.gold,
+                                &mut app.character.shop_inventory,
+                                &shop_ult.ultimate_type,
+                                app.floor_level,
+                            );
+                            match result {
+                                Ok(msg) => {
+                                    app.ultimate_shop_ui.show_message(msg);
+                                    app.audio_manager.play_sound_effect(SoundEffect::MenuPick);
+                                }
+                                Err(err) => {
+                                    app.ultimate_shop_ui
+                                        .show_message(format!("Cannot purchase: {}", err));
+                                    app.audio_manager.play_sound_effect(SoundEffect::MenuSwitch);
+                                }
+                            }
+                        }
+                    }
+                }
+                crate::ui::ultimate_shop::ShopTab::StatUpgrades => {
+                    if let Some(idx) = app.ultimate_shop_ui.upgrade_list_state.selected() {
+                        if let Some(shop_upg) = app.ultimate_shop.stat_upgrades.get(idx) {
+                            let result = app.ultimate_shop.purchase_stat_upgrade(
+                                &mut app.character.gold,
+                                &mut app.character.shop_inventory,
+                                &shop_upg.upgrade_type,
+                                app.floor_level,
+                            );
+                            match result {
+                                Ok(msg) => {
+                                    app.ultimate_shop_ui.show_message(msg);
+                                    app.audio_manager.play_sound_effect(SoundEffect::MenuPick);
+                                    // Apply stat upgrade immediately
+                                    apply_stat_upgrade(
+                                        app,
+                                        shop_upg.upgrade_type,
+                                        shop_upg.stack_amount,
+                                    );
+                                }
+                                Err(err) => {
+                                    app.ultimate_shop_ui
+                                        .show_message(format!("Cannot purchase: {}", err));
+                                    app.audio_manager.play_sound_effect(SoundEffect::MenuSwitch);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        KeyCode::Char('q') | KeyCode::Char('Q') | KeyCode::Esc => {
+            app.ultimate_shop_ui.reset();
+            app.state = AppState::Game;
+            app.is_paused = true;
+            app.audio_manager.play_sound_effect(SoundEffect::MenuSwitch);
+        }
+        _ => {}
+    }
+}
+
+/// Apply a stat upgrade to the character
+fn apply_stat_upgrade(
+    app: &mut App,
+    upgrade: crate::model::ultimate_shop::StatUpgradeType,
+    amount: f32,
+) {
+    use crate::model::ultimate_shop::StatUpgradeType;
+
+    match upgrade {
+        StatUpgradeType::MaxHealth => {
+            app.character.health_max += amount as i32;
+            app.character.health = app.character.health_max;
+        }
+        StatUpgradeType::AttackDamage => {
+            app.character.attack_damage += amount as i32;
+        }
+        StatUpgradeType::AttackSpeed => {
+            // Reduce cooldown by this percentage (amount is already in percentage format)
+            let reduction = 1.0 - (amount as f32 / 100.0); // Convert to decimal
+            let current_duration = app.character.attack_cooldown.duration();
+            app.character
+                .attack_cooldown
+                .set_duration(current_duration * reduction);
+        }
+        StatUpgradeType::MovementSpeed => {
+            app.character.speed += amount;
+        }
+        StatUpgradeType::DashDistance => {
+            app.character.dash_distance += amount as i32;
+        }
     }
 }

@@ -305,7 +305,7 @@ impl Enemy {
         min_player_distance: i32,
         max_attempts: usize,
     ) -> Vec<Position> {
-        use rand::Rng;
+        use rand::{Rng, RngExt};
 
         let mut valid_positions = Vec::new();
         let mut occupied_positions = std::collections::HashSet::new();

@@ -1,7 +1,6 @@
 use crate::model::item::ItemDrop;
-use rand::rngs::SmallRng;
 use rand::rngs::StdRng;
-use rand::{Rng, SeedableRng};
+use rand::{Rng, RngExt, SeedableRng};
 use ratatui::style::{Color, Style};
 use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
@@ -403,7 +402,7 @@ impl Floor {
 
             // Stable per-tile RNG (no flicker, still "random")
             let seed = (x as u64) << 32 | (y as u64);
-            let mut rng = SmallRng::seed_from_u64(seed);
+            let mut rng = StdRng::seed_from_u64(seed);
 
             let ch = wall_chars[rng.random_range(0..wall_chars.len())];
             let nearby_floors = self.count_nearby_floors(x, y, 2);
@@ -546,7 +545,7 @@ impl Floor {
     /// - In the largest connected region of the map (to avoid isolated pockets)
     /// - At a random location (not always the same spot)
     pub fn find_player_spawn(&self) -> Option<(i32, i32)> {
-        use rand::Rng;
+        use rand::{Rng, RngExt};
 
         // Find all walkable tiles and identify the largest connected region
         let mut visited = vec![false; (self.width * self.height) as usize];

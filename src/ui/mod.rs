@@ -6,6 +6,7 @@ pub mod main_menu;
 pub mod pause_menu;
 pub mod settings;
 pub mod skill_tree;
+pub mod ultimate_shop;
 pub mod victory_screen;
 
 use crate::app::{App, AppState};
@@ -21,6 +22,37 @@ pub fn draw(f: &mut Frame, app: &mut App) {
         AppState::MainMenu => main_menu::draw(f, app, area, pulse_color),
         AppState::CharacterCreation => character_creation::draw(f, app, area, pulse_color),
         AppState::Settings => settings::draw(f, app, area, pulse_color),
+        AppState::UltimateShop => {
+            // Draw game in background then shop overlay
+            app.update_terminal_size(area.width, area.height);
+
+            // Draw background game elements first
+            if let Some(ref floor) = app.current_floor {
+                // You can add minimal background rendering here if desired
+            }
+
+            // Create shop area (centered modal)
+            let shop_width = (area.width as usize).min(100).max(60) as u16;
+            let shop_height = (area.height as usize).min(40).max(20) as u16;
+            let shop_x = (area.width.saturating_sub(shop_width)) / 2;
+            let shop_y = (area.height.saturating_sub(shop_height)) / 2;
+
+            let shop_area = Rect {
+                x: shop_x,
+                y: shop_y,
+                width: shop_width,
+                height: shop_height,
+            };
+
+            ultimate_shop::draw(
+                f,
+                app.character.gold,
+                app.floor_level,
+                &app.ultimate_shop,
+                &mut app.ultimate_shop_ui,
+                shop_area,
+            );
+        }
         AppState::Game => {
             f.render_widget(Clear, area);
 

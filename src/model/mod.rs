@@ -23,4 +23,5 @@ pub mod skill;
 pub mod skill_tree_path;
 pub mod status_effect;
 pub mod ultimate;
+pub mod ultimate_shop;
 pub mod weapon;

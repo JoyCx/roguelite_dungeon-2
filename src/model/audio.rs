@@ -52,7 +52,7 @@ impl SoundEffect {
 
     /// Get a random hit sound effect variant (Hit1, Hit2, or Hit3)
     pub fn get_random_hit() -> PathBuf {
-        use rand::Rng;
+        use rand::{Rng, RngExt};
         let mut rng = rand::rng();
         let choice = rng.random_range(0..3);
         let filename = match choice {
@@ -270,7 +270,7 @@ impl AudioManager {
 
     /// Play Damaged sound with up to +3 pitch variations
     pub fn play_damaged_sound(&mut self) {
-        use rand::Rng;
+        use rand::{Rng, RngExt};
         let mut rng = rand::rng();
         let pitch_variation = rng.random_range(-3..=3) as f32;
         self.play_sound_with_pitch(SoundEffect::Damaged, pitch_variation);
@@ -278,7 +278,7 @@ impl AudioManager {
 
     /// Play Gold pickup sound with random pitch variation (-5 to +5)
     pub fn play_gold_sound(&mut self) {
-        use rand::Rng;
+        use rand::{Rng, RngExt};
         let mut rng = rand::rng();
         let pitch_variation = rng.random_range(-5..=5) as f32;
         self.play_sound_with_pitch(SoundEffect::Gold, pitch_variation);

@@ -8,6 +8,9 @@ use crate::model::gamesave::{GameSave, PlayerStats};
 use crate::model::particle::ParticleSystem;
 use crate::model::pathfinding_cache::PathfindingCache;
 use crate::model::settings::Settings;
+use crate::model::ultimate_shop::UltimateShop;
+use crate::ui::ultimate_shop::UltimateShopUI;
+use rand::RngExt;
 use ratatui::prelude::Color;
 use ratatui::widgets::ListState;
 use std::time::Instant;
@@ -20,6 +23,7 @@ pub enum AppState {
     Game,
     DevMenu,
     SkillTree,
+    UltimateShop,
     DeathScreen,
     VictoryScreen,
 }
@@ -47,7 +51,7 @@ pub enum AnimationCategory {
 impl AnimationCategory {
     /// Get random ASCII character from the category's character set
     pub fn get_random_character(&self) -> char {
-        use rand::Rng;
+        use rand::{Rng, RngExt};
         let chars = match self {
             AnimationCategory::CloseCombat => {
                 vec!['/', '\\', '|', '-', '+', 'X', '*']
@@ -176,6 +180,8 @@ pub struct App {
     pub victory_win_time: f32,               // Time elapsed when victory occurred
     pub last_weapon_pickup: Option<(String, crate::model::item_rarity::ItemRarity)>, // Weapon name and rarity
     pub weapon_pickup_timer: f32, // Timer for weapon pickup notification display
+    pub ultimate_shop: UltimateShop, // The shop system for ultimates and upgrades
+    pub ultimate_shop_ui: UltimateShopUI, // UI state for the ultimate shop
 }
 
 impl App {
@@ -252,6 +258,8 @@ impl App {
             victory_win_time: 0.0,
             last_weapon_pickup: None,
             weapon_pickup_timer: 0.0,
+            ultimate_shop: UltimateShop::new(),
+            ultimate_shop_ui: UltimateShopUI::new(),
         }
     }
 
@@ -386,7 +394,7 @@ impl App {
     }
 
     pub fn roll_random_seed(&mut self) {
-        use rand::Rng;
+        use rand::{Rng, RngExt};
         let new_seed: u64 = rand::rng().random_range(0..=u64::MAX);
         self.dev_seed_input = new_seed.to_string();
         self.regenerate_floor();
