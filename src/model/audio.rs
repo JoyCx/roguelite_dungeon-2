@@ -22,6 +22,10 @@ pub enum SoundEffect {
     KilledEnemy,
     AdvanceLevel,
     MenuClick,
+    MenuSwitch,
+    MenuPick,
+    ItemEquip,
+    Gold,
 }
 
 impl SoundEffect {
@@ -29,17 +33,34 @@ impl SoundEffect {
     pub fn file_name(&self) -> &'static str {
         match self {
             SoundEffect::Hit => "hit.wav",
-            SoundEffect::Damaged => "damaged.wav",
-            SoundEffect::Death => "death.wav",
+            SoundEffect::Damaged => "Damaged.mp3",
+            SoundEffect::Death => "Death.mp3",
             SoundEffect::PickedUpItem => "PickedUpItem.mp3",
             SoundEffect::KilledEnemy => "kill.wav",
             SoundEffect::AdvanceLevel => "AdvanceLevel.mp3",
             SoundEffect::MenuClick => "MenuClick.mp3",
+            SoundEffect::MenuSwitch => "MenuSwitch.mp3",
+            SoundEffect::MenuPick => "MenuPick.mp3",
+            SoundEffect::ItemEquip => "ItemEquip.mp3",
+            SoundEffect::Gold => "Gold.ogg",
         }
     }
 
     pub fn full_path(&self) -> PathBuf {
         PathBuf::from("audio/sfx").join(self.file_name())
+    }
+
+    /// Get a random hit sound effect variant (Hit1, Hit2, or Hit3)
+    pub fn get_random_hit() -> PathBuf {
+        use rand::Rng;
+        let mut rng = rand::rng();
+        let choice = rng.random_range(0..3);
+        let filename = match choice {
+            0 => "hit/Hit1.mp3",
+            1 => "hit/Hit2.mp3",
+            _ => "hit/Hit3.mp3",
+        };
+        PathBuf::from("audio/sfx").join(filename)
     }
 }
 
@@ -127,6 +148,10 @@ impl AudioManager {
             SoundEffect::KilledEnemy,
             SoundEffect::AdvanceLevel,
             SoundEffect::MenuClick,
+            SoundEffect::MenuSwitch,
+            SoundEffect::MenuPick,
+            SoundEffect::ItemEquip,
+            SoundEffect::Gold,
         ];
 
         for effect in &effects {
@@ -140,10 +165,24 @@ impl AudioManager {
                 );
             }
         }
+
+        // Also pre-load random hit variations
+        for i in 1..=3 {
+            let filename = format!("audio/sfx/hit/Hit{}.mp3", i);
+            if let Ok(_data) = fs::read(&filename) {
+                // Cache them with a dummy effect (we'll handle hit variations differently)
+            }
+        }
     }
 
     /// Play a sound effect using cached data (safe, non-blocking, low overhead)
     pub fn play_sound_effect(&mut self, effect: SoundEffect) {
+        // Special handling for Hit - use random variant
+        if effect == SoundEffect::Hit {
+            self.play_random_hit();
+            return;
+        }
+
         // Check if we have the effect cached
         if let Some(cached) = self.sfx_cache.get(&effect) {
             // Ensure we have an effects stream and sink
@@ -169,6 +208,80 @@ impl AudioManager {
                 }
             }
         }
+    }
+
+    /// Play a random hit sound effect (Hit1, Hit2, or Hit3)
+    pub fn play_random_hit(&mut self) {
+        let path = SoundEffect::get_random_hit();
+        if let Ok(data) = fs::read(&path) {
+            // Ensure we have an effects stream and sink
+            if self.effects_sink.is_none() {
+                if let Ok(mut stream) = rodio::OutputStreamBuilder::open_default_stream() {
+                    stream.log_on_drop(false);
+                    let sink = Sink::connect_new(stream.mixer());
+                    self.effects_sink = Some(Arc::new(Mutex::new(sink)));
+                    self._effects_stream = Some(Box::new(stream));
+                }
+            }
+
+            // If we have a sink, play the sound
+            if let Some(sink) = &self.effects_sink {
+                let cursor = std::io::Cursor::new(data);
+                if let Ok(source) = Decoder::new(cursor) {
+                    if let Ok(sink_guard) = sink.lock() {
+                        sink_guard.set_volume(self.sound_volume);
+                        sink_guard.append(source);
+                    }
+                }
+            }
+        }
+    }
+
+    /// Play a sound effect with pitch variation in semitones (-12 to +12)
+    pub fn play_sound_with_pitch(&mut self, effect: SoundEffect, pitch_semitones: f32) {
+        // Check if we have the effect cached
+        if let Some(cached) = self.sfx_cache.get(&effect) {
+            // Ensure we have an effects stream and sink
+            if self.effects_sink.is_none() {
+                if let Ok(mut stream) = rodio::OutputStreamBuilder::open_default_stream() {
+                    stream.log_on_drop(false);
+                    let sink = Sink::connect_new(stream.mixer());
+                    self.effects_sink = Some(Arc::new(Mutex::new(sink)));
+                    self._effects_stream = Some(Box::new(stream));
+                }
+            }
+
+            // If we have a sink, play the sound with pitch shift
+            if let Some(sink) = &self.effects_sink {
+                let cursor = std::io::Cursor::new(cached.data.as_ref().clone());
+                if let Ok(source) = Decoder::new(cursor) {
+                    // Convert semitones to speed multiplier (2^(semitones/12))
+                    let speed_multiplier = 2.0_f32.powf(pitch_semitones / 12.0);
+                    let speed_source = source.speed(speed_multiplier);
+
+                    if let Ok(sink_guard) = sink.lock() {
+                        sink_guard.set_volume(self.sound_volume);
+                        sink_guard.append(speed_source);
+                    }
+                }
+            }
+        }
+    }
+
+    /// Play Damaged sound with up to +3 pitch variations
+    pub fn play_damaged_sound(&mut self) {
+        use rand::Rng;
+        let mut rng = rand::rng();
+        let pitch_variation = rng.random_range(-3..=3) as f32;
+        self.play_sound_with_pitch(SoundEffect::Damaged, pitch_variation);
+    }
+
+    /// Play Gold pickup sound with random pitch variation (-5 to +5)
+    pub fn play_gold_sound(&mut self) {
+        use rand::Rng;
+        let mut rng = rand::rng();
+        let pitch_variation = rng.random_range(-5..=5) as f32;
+        self.play_sound_with_pitch(SoundEffect::Gold, pitch_variation);
     }
 
     /// Start playing music with fade-in
@@ -218,13 +331,13 @@ impl AudioManager {
         Ok(())
     }
 
-    /// Start fade-out transition
-    pub fn start_fade_out(&mut self, duration: f32) {
+    /// Start fade-out transition with muffling effect for death
+    pub fn start_death_fade_out(&mut self, duration: f32) {
         self.fade_state = FadeState::FadingOut {
             current_time: 0.0,
             duration,
         };
-        self.target_volume = 0.1; // Lower target for muffled effect
+        self.target_volume = 0.1; // Lower volume for muffled effect
     }
 
     /// Start fade-in transition

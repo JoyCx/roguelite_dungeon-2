@@ -6,10 +6,11 @@ pub mod main_menu;
 pub mod pause_menu;
 pub mod settings;
 pub mod skill_tree;
+pub mod victory_screen;
 
 use crate::app::{App, AppState};
 use ratatui::prelude::*;
-use ratatui::widgets::{Clear, Paragraph};
+use ratatui::widgets::{Block, Borders, Clear, Paragraph};
 
 pub fn draw(f: &mut Frame, app: &mut App) {
     let area = f.area();
@@ -139,7 +140,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
 
             // Render enemies
             if let Some(floor) = &app.current_floor {
-                let enemies: Vec<(i32, i32, char, Color)> = floor
+                let enemies: Vec<(i32, i32, String, Color)> = floor
                     .enemies
                     .iter()
                     .filter(|e| e.is_alive())
@@ -157,7 +158,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
                             }
                         };
                         let glyph = enemy.rarity.get_glyph();
-                        (enemy.position.x, enemy.position.y, glyph, color)
+                        (enemy.position.x, enemy.position.y, glyph.to_string(), color)
                     })
                     .collect();
                 drawing::render_enemies(f, game_area, &enemies, cx, cy);
@@ -311,6 +312,49 @@ pub fn draw(f: &mut Frame, app: &mut App) {
                 );
             }
 
+            // Render weapon pickup notification
+            if let Some((weapon_name, rarity)) = &app.last_weapon_pickup {
+                let rarity_color = rarity.get_color();
+                let box_width = 40.min(area.width.saturating_sub(4));
+                let box_x = (area.width.saturating_sub(box_width)) / 2;
+                let weapon_rarity = rarity.name();
+                let lines = vec![
+                    Line::from(Span::styled(
+                        "Weapon Picked Up",
+                        Style::default()
+                            .fg(rarity_color)
+                            .add_modifier(Modifier::BOLD),
+                    )),
+                    Line::from(""),
+                    Line::from(Span::styled(
+                        format!("{} {} ", weapon_rarity, weapon_name),
+                        Style::default().fg(rarity_color),
+                    )),
+                ];
+
+                let notification_area = Rect {
+                    x: area.x + box_x,
+                    y: area.y + 1,
+                    width: box_width,
+                    height: 5,
+                };
+
+                // Render dark overlay to cleanly show notification
+                f.render_widget(Clear, notification_area);
+
+                let notification = Paragraph::new(lines)
+                    .block(
+                        Block::default()
+                            .borders(Borders::ALL)
+                            .border_style(Style::default().fg(rarity_color))
+                            .style(Style::default().bg(Color::Black)),
+                    )
+                    .alignment(Alignment::Center)
+                    .style(Style::default().bg(Color::Black));
+
+                f.render_widget(notification, notification_area);
+            }
+
             // Render pause indicator last (on top of everything)
             if app.is_paused {
                 drawing::render_pause_indicator(f, area);
@@ -321,5 +365,21 @@ pub fn draw(f: &mut Frame, app: &mut App) {
         AppState::DevMenu => dev_menu::draw(f, app, area),
         AppState::SkillTree => skill_tree::draw(f, app, area),
         AppState::DeathScreen => death_screen::draw(f, app, area),
+        AppState::VictoryScreen => victory_screen::draw(f, app, area),
+    }
+}
+
+/// Show load save menu from main menu
+pub fn show_load_save_menu(app: &mut App) {
+    use crate::model::gamesave::GameSave;
+
+    if let Ok(saves) = GameSave::list_saves() {
+        if !saves.is_empty() {
+            // For now, load the first save (in a full implementation, you'd show a menu to select)
+            if let Ok(()) = app.load_game(&saves[0]) {
+                app.state = AppState::Game;
+                app.restart_game(); // Initialize the game with loaded state
+            }
+        }
     }
 }

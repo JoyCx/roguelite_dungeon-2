@@ -29,7 +29,7 @@ pub fn draw(f: &mut Frame, app: &mut App, area: Rect) {
     };
 
     let input_text = if app.dev_seed_input.is_empty() {
-        "[Commands: R=Random | ENTER=Generate | E=Spawn Enemy | D=Damage Test | G=Add Gold | H=Cycle Attack Pattern | T=Skill Tree | P=Play | ESC=Back]"
+        "[Commands: R=Random | ENTER=Generate | E=Spawn Enemy | D=Damage Test | G=Add Gold | K=Victory | H=Pattern | ESC=Back]"
             .to_string()
     } else {
         format!("Seed Input: {}", app.dev_seed_input)
@@ -200,7 +200,8 @@ pub fn draw(f: &mut Frame, app: &mut App, area: Rect) {
         ("E", "Enemy", Some(Color::Yellow)),
         ("D", "Damage", Some(Color::LightRed)),
         ("G", "Gold", Some(Color::LightYellow)),
-        ("P", "Play", Some(Color::Magenta)),
+        ("W", "Weapons", Some(Color::Magenta)),
+        ("K", "Victory", Some(Color::Green)),
         ("ESC", "Back", Some(Color::Red)),
     ];
 
@@ -237,6 +238,13 @@ pub fn handle_input(app: &mut App, key: crossterm::event::KeyCode) {
         KeyCode::Char('g') | KeyCode::Char('G') => {
             // Add gold for testing
             app.character.gold += 50;
+        }
+        KeyCode::Char('k') | KeyCode::Char('K') => {
+            // Show victory screen for testing
+            if let Some(started) = app.game_started_at {
+                app.victory_win_time = started.elapsed().as_secs_f32();
+            }
+            app.state = crate::app::AppState::VictoryScreen;
         }
         KeyCode::Char('h') | KeyCode::Char('H') => {
             // Cycle attack pattern for testing
@@ -297,4 +305,41 @@ fn spawn_test_enemy(
     enemy.base_gold = template.rarity.calculate_gold_drop(difficulty);
 
     floor.enemies.push(enemy);
+}
+
+/// Spawn weapons of all types in all rarities on the floor for testing
+pub fn spawn_all_weapon_rarities(floor: &mut crate::model::floor::Floor) {
+    use crate::model::item::ItemDrop;
+    use crate::model::item_tier::ItemTier;
+    use crate::model::weapon::{Weapon, WeaponType};
+
+    let weapon_types = [
+        WeaponType::Sword,
+        WeaponType::Bow,
+        WeaponType::Mace,
+        WeaponType::Spear,
+        WeaponType::Axe,
+        WeaponType::Staff,
+    ];
+
+    let rarities = [
+        ItemTier::Common,
+        ItemTier::Rare,
+        ItemTier::Epic,
+        ItemTier::Exotic,
+        ItemTier::Legendary,
+        ItemTier::Mythic,
+        ItemTier::Godly,
+    ];
+
+    // Spawn all weapon type and rarity combinations
+    for rarity in &rarities {
+        for weapon_type in &weapon_types {
+            if let Some((x, y)) = find_empty_spawn_position(floor) {
+                let weapon = Weapon::for_type_and_rarity(weapon_type, rarity);
+                let item_drop = ItemDrop::weapon(weapon, x, y);
+                floor.add_item(item_drop);
+            }
+        }
+    }
 }

@@ -186,6 +186,61 @@ impl Character {
         self.damaged_at = Some(Instant::now());
     }
 
+    /// Charge ultimate ability based on damage dealt
+    pub fn charge_ultimate(&mut self, damage: i32) {
+        let charge_amount = self.ultimate.charge_on_hit(damage);
+        self.ultimate_charge = (self.ultimate_charge + charge_amount).min(100.0);
+    }
+
+    /// Use the ultimate ability if charged
+    pub fn use_ultimate(&mut self) -> bool {
+        if self.ultimate_charge >= 100.0 && self.ultimate.can_use() {
+            self.ultimate_charge = 0.0;
+            self.ultimate.activate();
+            self.ultimate.start_cooldown();
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Check if player is in a Rage ultimate
+    #[allow(dead_code)]
+    pub fn is_raging(&self) -> bool {
+        matches!(
+            self.ultimate.get_active_type(),
+            Some(crate::model::ultimate::UltimateType::Rage)
+        )
+    }
+
+    /// Check if player is in Ghost ultimate (invulnerable)
+    pub fn is_ghost(&self) -> bool {
+        matches!(
+            self.ultimate.get_active_type(),
+            Some(crate::model::ultimate::UltimateType::Ghost)
+        )
+    }
+
+    /// Get effective speed multiplier based on active ultimate
+    #[allow(dead_code)]
+    pub fn get_ultimate_speed_multiplier(&self) -> f32 {
+        if self.is_raging() {
+            2.0 // Double speed during Rage
+        } else {
+            1.0
+        }
+    }
+
+    /// Get damage multiplier based on active ultimate
+    #[allow(dead_code)]
+    pub fn get_ultimate_damage_multiplier(&self) -> f32 {
+        if self.is_raging() {
+            2.0 // Double damage during Rage
+        } else {
+            1.0
+        }
+    }
+
     pub fn apply_knockback(&mut self, dx: f32, dy: f32, force: f32) {
         // Normalize direction to prevent diagonal knockback from being stronger
         // Only apply knockback in the dominant direction

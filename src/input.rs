@@ -13,6 +13,7 @@ pub fn handle_input(app: &mut App, key: KeyEvent) {
         AppState::DevMenu => handlers::handle_dev_menu_input(app, key),
         AppState::SkillTree => handlers::handle_skill_tree_input(app, key),
         AppState::DeathScreen => crate::ui::death_screen::handle_input(app, key.code),
+        AppState::VictoryScreen => crate::ui::victory_screen::handle_input(app, key.code),
     }
 }
 

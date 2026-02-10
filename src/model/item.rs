@@ -54,12 +54,13 @@ impl ItemDrop {
     }
 
     pub fn weapon(weapon: crate::model::weapon::Weapon, x: i32, y: i32) -> Self {
+        let rarity = weapon.rarity.clone();
         Self {
             item_type: ItemDropType::Weapon(weapon),
             x,
             y,
             time_on_ground: 0.0,
-            tier: ItemTier::Common,
+            tier: rarity,
             stackable: false, // Weapons don't stack
         }
     }

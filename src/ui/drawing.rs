@@ -178,16 +178,17 @@ pub fn render_arrows(
 pub fn render_enemies(
     f: &mut Frame,
     area: Rect,
-    enemies: &[(i32, i32, char, Color)],
+    enemies: &[(i32, i32, String, Color)],
     offset_x: i32,
     offset_y: i32,
 ) {
     for (x, y, glyph, color) in enemies {
         let screen_x = (x - offset_x) as u16;
         let screen_y = (y - offset_y) as u16;
+        let glyph_width = if glyph.contains(' ') { 2 } else { 1 };
 
         if screen_x < area.width && screen_y < area.height {
-            let pos_area = Rect::new(area.x + screen_x, area.y + screen_y, 1, 1);
+            let pos_area = Rect::new(area.x + screen_x, area.y + screen_y, glyph_width as u16, 1);
             let enemy_indicator = Paragraph::new(glyph.to_string())
                 .style(Style::default().fg(*color).add_modifier(Modifier::BOLD));
             f.render_widget(enemy_indicator, pos_area);

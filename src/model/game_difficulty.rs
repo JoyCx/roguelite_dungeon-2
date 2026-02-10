@@ -20,6 +20,17 @@ impl GameDifficulty {
         }
     }
 
+    /// Parse difficulty from string
+    pub fn from_name(name: &str) -> Self {
+        match name {
+            "Easy" => GameDifficulty::Easy,
+            "Normal" => GameDifficulty::Normal,
+            "Hard" => GameDifficulty::Hard,
+            "Death" => GameDifficulty::Death,
+            _ => GameDifficulty::Normal,
+        }
+    }
+
     /// Returns multiplier for rare item drop chance (higher = more rare items)
     pub fn rarity_multiplier(&self) -> f32 {
         match self {

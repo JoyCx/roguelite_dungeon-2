@@ -38,6 +38,8 @@ pub struct Enemy {
     #[serde(skip)]
     pub damaged_at: Option<std::time::Instant>, // timestamp of when entity was last damaged
     pub detection_radius: i32,       // radius within which enemy detects and chases player
+    #[serde(skip)]
+    pub attack_pattern_cycle: usize, // tracks which attack pattern a boss is currently using
 }
 
 impl Enemy {
@@ -61,6 +63,7 @@ impl Enemy {
             knockback_velocity: (0.0, 0.0),
             damaged_at: None,
             detection_radius: 5, // Default, will be set from template
+            attack_pattern_cycle: 0,
         }
     }
 

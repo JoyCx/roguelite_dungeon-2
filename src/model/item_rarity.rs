@@ -26,18 +26,6 @@ impl ItemRarity {
         }
     }
 
-    pub fn color_code(&self) -> &'static str {
-        match self {
-            ItemRarity::Common => "⚪",    // White
-            ItemRarity::Rare => "🟢",      // Green
-            ItemRarity::Epic => "🔵",      // Blue
-            ItemRarity::Exotic => "🟣",    // Purple
-            ItemRarity::Legendary => "🟠", // Orange
-            ItemRarity::Mythic => "🔴",    // Red
-            ItemRarity::Godly => "⭐",     // Star
-        }
-    }
-
     /// Get rarity color for UI rendering (base fade progression)
     pub fn get_color(&self) -> Color {
         match self {

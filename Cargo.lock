@@ -1372,6 +1372,8 @@ dependencies = [
  "rodio",
  "serde",
  "serde_json",
+ "unicode-width",
+ "winapi",
 ]
 
 [[package]]

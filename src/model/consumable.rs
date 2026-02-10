@@ -14,11 +14,11 @@ impl ConsumableType {
     /// Get consistent glyph for this consumable type
     pub fn get_glyph(&self) -> &'static str {
         match self {
-            ConsumableType::WeakHealingDraught => "❤️‍🩹",
-            ConsumableType::BandageRoll => "🩹",
-            ConsumableType::AntitoxinVial => "🧪",
-            ConsumableType::FireOilFlask => "🍾",
-            ConsumableType::BlessedBread => "🍞",
+            ConsumableType::WeakHealingDraught => "♥", // Heart for healing
+            ConsumableType::BandageRoll => "✚",        // Cross for bandage
+            ConsumableType::AntitoxinVial => "⚗",      // Alembic / potion
+            ConsumableType::FireOilFlask => "𐃯",       // Diamond as a flask placeholder
+            ConsumableType::BlessedBread => "≡",       // Steam / cooked item
         }
     }
 

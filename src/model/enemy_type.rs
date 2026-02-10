@@ -80,24 +80,24 @@ impl EnemyRarity {
     }
 
     /// Get unique ASCII art representation for this enemy type
-    pub fn get_glyph(&self) -> char {
+    pub fn get_glyph(&self) -> &'static str {
         match self {
-            EnemyRarity::Fighter => 'x',
-            EnemyRarity::Guard => '⛨',
-            EnemyRarity::Champion => '◆',
-            EnemyRarity::Elite => '☠',
-            EnemyRarity::Boss => '♛',
+            EnemyRarity::Fighter => "x",
+            EnemyRarity::Guard => "⛊ ",
+            EnemyRarity::Champion => "◆",
+            EnemyRarity::Elite => "☠",
+            EnemyRarity::Boss => "♛ ",
         }
     }
 
     /// Get color for this enemy rarity (using "Blood & Shadow" palette)
     pub fn get_color(&self) -> Color {
         match self {
-            EnemyRarity::Fighter => Color::Red,                    // Standard red aggression
-            EnemyRarity::Guard => Color::Rgb(200, 50, 50),         // Deep crimson - feels armored
-            EnemyRarity::Champion => Color::Rgb(255, 0, 150),      // Vivid magenta - mechanical step up
-            EnemyRarity::Elite => Color::Rgb(140, 0, 255),         // Deep sinister purple - shadow magic
-            EnemyRarity::Boss => Color::Rgb(0, 255, 100),          // Neon acid green - calamity/contrast
+            EnemyRarity::Fighter => Color::Red, // Standard red aggression
+            EnemyRarity::Guard => Color::Rgb(200, 50, 50), // Deep crimson - feels armored
+            EnemyRarity::Champion => Color::Rgb(255, 0, 150), // Vivid magenta - mechanical step up
+            EnemyRarity::Elite => Color::Rgb(140, 0, 255), // Deep sinister purple - shadow magic
+            EnemyRarity::Boss => Color::Rgb(0, 255, 100), // Neon acid green - calamity/contrast
         }
     }
 

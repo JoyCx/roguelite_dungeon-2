@@ -54,8 +54,11 @@ pub struct BossEnemy {
     /// Boss enrage mechanic - damage multiplier when below 33% health
     pub enrage_multiplier: f32,
 
-    /// Attack pattern for this boss
-    pub attack_pattern: AttackPattern,
+    /// Attack patterns for this boss
+    pub attack_patterns: Vec<AttackPattern>,
+
+    /// Current attack pattern index
+    pub attack_pattern_index: usize,
 
     /// Loot multiplier (bosses drop more rewards)
     pub loot_multiplier: i32,
@@ -64,12 +67,52 @@ pub struct BossEnemy {
 impl BossEnemy {
     /// Create a new boss enemy at the given position
     pub fn new(x: i32, y: i32, boss_type: BossType) -> Self {
-        let (base_health, base_max_health, attack_pattern) = match boss_type {
-            BossType::GoblinOverlord => (120, 120, AttackPattern::WhirlwindAttack),
-            BossType::SkeletalKnight => (180, 180, AttackPattern::BasicSlash),
-            BossType::FlameSorcerer => (100, 100, AttackPattern::Fireball(3)),
-            BossType::ShadowAssassin => (110, 110, AttackPattern::SwordThrust(2)),
-            BossType::CorruptedWarden => (200, 200, AttackPattern::ChainLightning(4)),
+        let (base_health, base_max_health, attack_patterns) = match boss_type {
+            BossType::GoblinOverlord => (
+                120,
+                120,
+                vec![
+                    AttackPattern::WhirlwindAttack,
+                    AttackPattern::BasicSlash,
+                    AttackPattern::GroundSlam(2),
+                ],
+            ),
+            BossType::SkeletalKnight => (
+                180,
+                180,
+                vec![
+                    AttackPattern::BasicSlash,
+                    AttackPattern::SwordThrust(2),
+                    AttackPattern::GroundSlam(1),
+                ],
+            ),
+            BossType::FlameSorcerer => (
+                100,
+                100,
+                vec![
+                    AttackPattern::Fireball(3),
+                    AttackPattern::MeteorShower(4, 2),
+                    AttackPattern::Fireball(2),
+                ],
+            ),
+            BossType::ShadowAssassin => (
+                110,
+                110,
+                vec![
+                    AttackPattern::SwordThrust(2),
+                    AttackPattern::WhirlwindAttack,
+                    AttackPattern::BasicSlash,
+                ],
+            ),
+            BossType::CorruptedWarden => (
+                200,
+                200,
+                vec![
+                    AttackPattern::ChainLightning(4),
+                    AttackPattern::Fireball(3),
+                    AttackPattern::FrostNova(3),
+                ],
+            ),
         };
 
         let mut base_enemy = Enemy::new(x, y, BOSS_BASE_SPEED * ENEMY_SPEED_MULTIPLIER);
@@ -85,7 +128,8 @@ impl BossEnemy {
             special_ability_duration: 0.0,
             phase_transition_cooldown: None,
             enrage_multiplier: 1.0,
-            attack_pattern,
+            attack_patterns,
+            attack_pattern_index: 0,
             loot_multiplier: 3,
         }
     }
@@ -237,6 +281,19 @@ impl BossEnemy {
     /// Check if currently in special ability state
     pub fn is_in_special_state(&self) -> bool {
         self.special_ability_duration > 0.0
+    }
+
+    /// Get the current attack pattern
+    pub fn get_current_attack_pattern(&self) -> AttackPattern {
+        self.attack_patterns
+            .get(self.attack_pattern_index)
+            .cloned()
+            .unwrap_or_else(|| AttackPattern::BasicSlash)
+    }
+
+    /// Rotate to the next attack pattern
+    pub fn rotate_attack_pattern(&mut self) {
+        self.attack_pattern_index = (self.attack_pattern_index + 1) % self.attack_patterns.len();
     }
 }
 

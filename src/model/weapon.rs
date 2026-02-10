@@ -1,6 +1,5 @@
 use crate::model::attack_pattern::AttackPattern;
 use crate::model::item_tier::ItemTier;
-use crate::model::reach_shape::ReachShape;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -17,11 +16,11 @@ impl WeaponType {
     /// Get consistent glyph for this weapon type (applies across all rarities)
     pub fn get_glyph(&self) -> &'static str {
         match self {
-            WeaponType::Sword => "🗡️",
-            WeaponType::Bow => "🏹",
-            WeaponType::Mace => "🔨",
-            WeaponType::Spear => "⚜️",
-            WeaponType::Axe => "🪓",
+            WeaponType::Sword => "𓌜",
+            WeaponType::Bow => "}",
+            WeaponType::Mace => "♱",
+            WeaponType::Spear => "࿈",
+            WeaponType::Axe => "𐃈 ",
             WeaponType::Staff => "⚚",
         }
     }
@@ -48,8 +47,6 @@ pub struct Weapon {
     pub enchants: Vec<Enchant>,
     pub rarity: ItemTier,
     pub attack_pattern: AttackPattern,
-    #[serde(skip)]
-    pub reach_shape: ReachShape,
 }
 
 impl Weapon {
@@ -63,7 +60,6 @@ impl Weapon {
             enchants: Vec::new(),
             rarity: ItemTier::Common,
             attack_pattern: AttackPattern::BasicSlash,
-            reach_shape: ReachShape::Arc,
         }
     }
 
@@ -76,7 +72,6 @@ impl Weapon {
             enchants: Vec::new(),
             rarity: ItemTier::Common,
             attack_pattern: AttackPattern::ArrowShot(5),
-            reach_shape: ReachShape::Line(1),
         }
     }
 
@@ -89,7 +84,6 @@ impl Weapon {
             enchants: Vec::new(),
             rarity: ItemTier::Common,
             attack_pattern: AttackPattern::GroundSlam(2),
-            reach_shape: ReachShape::Area,
         }
     }
 
@@ -103,7 +97,6 @@ impl Weapon {
             enchants: Vec::new(),
             rarity: ItemTier::Rare,
             attack_pattern: AttackPattern::SwordThrust(3),
-            reach_shape: ReachShape::Arc,
         }
     }
 
@@ -116,7 +109,6 @@ impl Weapon {
             enchants: Vec::new(),
             rarity: ItemTier::Rare,
             attack_pattern: AttackPattern::MultiShot(5, 2),
-            reach_shape: ReachShape::Line(2),
         }
     }
 
@@ -129,7 +121,6 @@ impl Weapon {
             enchants: Vec::new(),
             rarity: ItemTier::Rare,
             attack_pattern: AttackPattern::GroundSlam(3),
-            reach_shape: ReachShape::Area,
         }
     }
 
@@ -142,7 +133,6 @@ impl Weapon {
             enchants: Vec::new(),
             rarity: ItemTier::Rare,
             attack_pattern: AttackPattern::SwordThrust(4),
-            reach_shape: ReachShape::Line(1),
         }
     }
 
@@ -155,7 +145,6 @@ impl Weapon {
             enchants: Vec::new(),
             rarity: ItemTier::Rare,
             attack_pattern: AttackPattern::Barrage(3),
-            reach_shape: ReachShape::Arc,
         }
     }
 
@@ -168,7 +157,6 @@ impl Weapon {
             enchants: Vec::new(),
             rarity: ItemTier::Rare,
             attack_pattern: AttackPattern::WhirlwindAttack,
-            reach_shape: ReachShape::Area,
         }
     }
 
@@ -182,7 +170,6 @@ impl Weapon {
             enchants: Vec::new(),
             rarity: ItemTier::Epic,
             attack_pattern: AttackPattern::CrescentSlash,
-            reach_shape: ReachShape::Arc,
         }
     }
 
@@ -195,7 +182,6 @@ impl Weapon {
             enchants: Vec::new(),
             rarity: ItemTier::Epic,
             attack_pattern: AttackPattern::Barrage(5),
-            reach_shape: ReachShape::Line(3),
         }
     }
 
@@ -208,7 +194,6 @@ impl Weapon {
             enchants: Vec::new(),
             rarity: ItemTier::Epic,
             attack_pattern: AttackPattern::GroundSlam(4),
-            reach_shape: ReachShape::Area,
         }
     }
 
@@ -221,7 +206,6 @@ impl Weapon {
             enchants: Vec::new(),
             rarity: ItemTier::Epic,
             attack_pattern: AttackPattern::SwordThrust(5),
-            reach_shape: ReachShape::Line(2),
         }
     }
 
@@ -234,7 +218,6 @@ impl Weapon {
             enchants: Vec::new(),
             rarity: ItemTier::Epic,
             attack_pattern: AttackPattern::Barrage(4),
-            reach_shape: ReachShape::Arc,
         }
     }
 
@@ -247,7 +230,6 @@ impl Weapon {
             enchants: Vec::new(),
             rarity: ItemTier::Epic,
             attack_pattern: AttackPattern::FrostNova(4),
-            reach_shape: ReachShape::Area,
         }
     }
 
@@ -260,7 +242,6 @@ impl Weapon {
             enchants: Vec::new(),
             rarity: ItemTier::Epic,
             attack_pattern: AttackPattern::Fireball(3),
-            reach_shape: ReachShape::Area,
         }
     }
 
@@ -274,7 +255,6 @@ impl Weapon {
             enchants: Vec::new(),
             rarity: ItemTier::Exotic,
             attack_pattern: AttackPattern::WhirlwindAttack,
-            reach_shape: ReachShape::Arc,
         }
     }
 
@@ -287,7 +267,6 @@ impl Weapon {
             enchants: Vec::new(),
             rarity: ItemTier::Exotic,
             attack_pattern: AttackPattern::MultiShot(7, 3),
-            reach_shape: ReachShape::Line(4),
         }
     }
 
@@ -300,7 +279,6 @@ impl Weapon {
             enchants: Vec::new(),
             rarity: ItemTier::Exotic,
             attack_pattern: AttackPattern::GroundSlam(5),
-            reach_shape: ReachShape::Area,
         }
     }
 
@@ -313,7 +291,6 @@ impl Weapon {
             enchants: Vec::new(),
             rarity: ItemTier::Exotic,
             attack_pattern: AttackPattern::Barrage(6),
-            reach_shape: ReachShape::Line(3),
         }
     }
 
@@ -326,7 +303,6 @@ impl Weapon {
             enchants: Vec::new(),
             rarity: ItemTier::Exotic,
             attack_pattern: AttackPattern::ChainLightning(5),
-            reach_shape: ReachShape::Arc,
         }
     }
 
@@ -339,7 +315,6 @@ impl Weapon {
             enchants: Vec::new(),
             rarity: ItemTier::Exotic,
             attack_pattern: AttackPattern::ChainLightning(6),
-            reach_shape: ReachShape::Area,
         }
     }
 
@@ -352,7 +327,6 @@ impl Weapon {
             enchants: Vec::new(),
             rarity: ItemTier::Exotic,
             attack_pattern: AttackPattern::MeteorShower(6, 3),
-            reach_shape: ReachShape::Area,
         }
     }
 
@@ -366,7 +340,6 @@ impl Weapon {
             enchants: Vec::new(),
             rarity: ItemTier::Legendary,
             attack_pattern: AttackPattern::CrescentSlash,
-            reach_shape: ReachShape::Arc,
         }
     }
 
@@ -379,7 +352,6 @@ impl Weapon {
             enchants: Vec::new(),
             rarity: ItemTier::Legendary,
             attack_pattern: AttackPattern::PiercingShot(10),
-            reach_shape: ReachShape::Line(5),
         }
     }
 
@@ -392,7 +364,6 @@ impl Weapon {
             enchants: Vec::new(),
             rarity: ItemTier::Legendary,
             attack_pattern: AttackPattern::GroundSlam(6),
-            reach_shape: ReachShape::Area,
         }
     }
 
@@ -405,7 +376,6 @@ impl Weapon {
             enchants: Vec::new(),
             rarity: ItemTier::Legendary,
             attack_pattern: AttackPattern::SwordThrust(7),
-            reach_shape: ReachShape::Line(4),
         }
     }
 
@@ -418,7 +388,6 @@ impl Weapon {
             enchants: Vec::new(),
             rarity: ItemTier::Legendary,
             attack_pattern: AttackPattern::Vortex(5),
-            reach_shape: ReachShape::Arc,
         }
     }
 
@@ -431,7 +400,6 @@ impl Weapon {
             enchants: Vec::new(),
             rarity: ItemTier::Legendary,
             attack_pattern: AttackPattern::ChainLightning(8),
-            reach_shape: ReachShape::Area,
         }
     }
 
@@ -445,7 +413,6 @@ impl Weapon {
             enchants: Vec::new(),
             rarity: ItemTier::Mythic,
             attack_pattern: AttackPattern::WhirlwindAttack,
-            reach_shape: ReachShape::Arc,
         }
     }
 
@@ -458,7 +425,6 @@ impl Weapon {
             enchants: Vec::new(),
             rarity: ItemTier::Mythic,
             attack_pattern: AttackPattern::Barrage(8),
-            reach_shape: ReachShape::Line(6),
         }
     }
 
@@ -471,7 +437,6 @@ impl Weapon {
             enchants: Vec::new(),
             rarity: ItemTier::Mythic,
             attack_pattern: AttackPattern::GroundSlam(7),
-            reach_shape: ReachShape::Area,
         }
     }
 
@@ -484,7 +449,6 @@ impl Weapon {
             enchants: Vec::new(),
             rarity: ItemTier::Mythic,
             attack_pattern: AttackPattern::CrescentSlash,
-            reach_shape: ReachShape::Line(5),
         }
     }
 
@@ -497,7 +461,6 @@ impl Weapon {
             enchants: Vec::new(),
             rarity: ItemTier::Mythic,
             attack_pattern: AttackPattern::Vortex(7),
-            reach_shape: ReachShape::Arc,
         }
     }
 
@@ -510,7 +473,6 @@ impl Weapon {
             enchants: Vec::new(),
             rarity: ItemTier::Mythic,
             attack_pattern: AttackPattern::MeteorShower(8, 4),
-            reach_shape: ReachShape::Area,
         }
     }
 
@@ -524,7 +486,6 @@ impl Weapon {
             enchants: Vec::new(),
             rarity: ItemTier::Godly,
             attack_pattern: AttackPattern::SwordThrust(8),
-            reach_shape: ReachShape::Arc,
         }
     }
 
@@ -537,7 +498,6 @@ impl Weapon {
             enchants: Vec::new(),
             rarity: ItemTier::Godly,
             attack_pattern: AttackPattern::PiercingShot(12),
-            reach_shape: ReachShape::Line(8),
         }
     }
 
@@ -550,7 +510,6 @@ impl Weapon {
             enchants: Vec::new(),
             rarity: ItemTier::Godly,
             attack_pattern: AttackPattern::GroundSlam(8),
-            reach_shape: ReachShape::Area,
         }
     }
 
@@ -563,7 +522,6 @@ impl Weapon {
             enchants: Vec::new(),
             rarity: ItemTier::Godly,
             attack_pattern: AttackPattern::Barrage(10),
-            reach_shape: ReachShape::Line(6),
         }
     }
 
@@ -576,7 +534,6 @@ impl Weapon {
             enchants: Vec::new(),
             rarity: ItemTier::Godly,
             attack_pattern: AttackPattern::Vortex(8),
-            reach_shape: ReachShape::Arc,
         }
     }
 
@@ -589,7 +546,6 @@ impl Weapon {
             enchants: Vec::new(),
             rarity: ItemTier::Godly,
             attack_pattern: AttackPattern::ChainLightning(10),
-            reach_shape: ReachShape::Area,
         }
     }
 
@@ -654,6 +610,67 @@ impl Weapon {
                 4 => Self::apocalypse_axe(),
                 _ => Self::transcendence_staff(),
             },
+        }
+    }
+
+    /// Create a weapon of specified type and rarity
+    pub fn for_type_and_rarity(weapon_type: &WeaponType, rarity: &ItemTier) -> Self {
+        match (weapon_type, rarity) {
+            // COMMON
+            (WeaponType::Sword, ItemTier::Common) => Self::new_sword(),
+            (WeaponType::Bow, ItemTier::Common) => Self::new_bow(),
+            (WeaponType::Mace, ItemTier::Common) => Self::new_mace(),
+            (WeaponType::Spear, ItemTier::Common) => Self::new_sword(), // Fallback
+            (WeaponType::Axe, ItemTier::Common) => Self::new_bow(),     // Fallback
+            (WeaponType::Staff, ItemTier::Common) => Self::new_mace(),  // Fallback
+
+            // RARE
+            (WeaponType::Sword, ItemTier::Rare) => Self::steel_sword(),
+            (WeaponType::Bow, ItemTier::Rare) => Self::composite_bow(),
+            (WeaponType::Mace, ItemTier::Rare) => Self::steel_mace(),
+            (WeaponType::Spear, ItemTier::Rare) => Self::spear(),
+            (WeaponType::Axe, ItemTier::Rare) => Self::battle_axe(),
+            (WeaponType::Staff, ItemTier::Rare) => Self::quarterstaff(),
+
+            // EPIC
+            (WeaponType::Sword, ItemTier::Epic) => Self::mithril_sword(),
+            (WeaponType::Bow, ItemTier::Epic) => Self::longbow(),
+            (WeaponType::Mace, ItemTier::Epic) => Self::warhammer(),
+            (WeaponType::Spear, ItemTier::Epic) => Self::halberd(),
+            (WeaponType::Axe, ItemTier::Epic) => Self::broad_axe(),
+            (WeaponType::Staff, ItemTier::Epic) => Self::frost_staff(),
+
+            // EXOTIC
+            (WeaponType::Sword, ItemTier::Exotic) => Self::adamant_sword(),
+            (WeaponType::Bow, ItemTier::Exotic) => Self::platinum_bow(),
+            (WeaponType::Mace, ItemTier::Exotic) => Self::molten_hammer(),
+            (WeaponType::Spear, ItemTier::Exotic) => Self::dragon_spear(),
+            (WeaponType::Axe, ItemTier::Exotic) => Self::storm_axe(),
+            (WeaponType::Staff, ItemTier::Exotic) => Self::arcane_staff(),
+
+            // LEGENDARY
+            (WeaponType::Sword, ItemTier::Legendary) => Self::excalibur(),
+            (WeaponType::Bow, ItemTier::Legendary) => Self::divine_bow(),
+            (WeaponType::Mace, ItemTier::Legendary) => Self::mjolnir(),
+            (WeaponType::Spear, ItemTier::Legendary) => Self::gungnir(),
+            (WeaponType::Axe, ItemTier::Legendary) => Self::world_splitter(),
+            (WeaponType::Staff, ItemTier::Legendary) => Self::infinity_staff(),
+
+            // MYTHIC
+            (WeaponType::Sword, ItemTier::Mythic) => Self::primordial_blade(),
+            (WeaponType::Bow, ItemTier::Mythic) => Self::celestial_bow(),
+            (WeaponType::Mace, ItemTier::Mythic) => Self::titan_hammer(),
+            (WeaponType::Spear, ItemTier::Mythic) => Self::void_spear(),
+            (WeaponType::Axe, ItemTier::Mythic) => Self::chaos_axe(),
+            (WeaponType::Staff, ItemTier::Mythic) => Self::cosmic_staff(),
+
+            // GODLY
+            (WeaponType::Sword, ItemTier::Godly) => Self::godly_greatsword(),
+            (WeaponType::Bow, ItemTier::Godly) => Self::heavens_bow(),
+            (WeaponType::Mace, ItemTier::Godly) => Self::omnipotent_hammer(),
+            (WeaponType::Spear, ItemTier::Godly) => Self::dimensional_spear(),
+            (WeaponType::Axe, ItemTier::Godly) => Self::apocalypse_axe(),
+            (WeaponType::Staff, ItemTier::Godly) => Self::transcendence_staff(),
         }
     }
 

@@ -11,6 +11,7 @@ use std::{
 mod app;
 mod colors;
 mod constants;
+mod emoji;
 mod input;
 mod model;
 mod ui;

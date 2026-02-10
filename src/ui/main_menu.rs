@@ -32,7 +32,7 @@ pub fn draw(f: &mut Frame, app: &mut App, area: Rect, pulse_color: Color) {
         area.height,
     );
 
-    let items = ["Start Game", "Saves", "Settings", "Dev Tools", "Exit"];
+    let items = ["Start Game", "Load Save", "Settings", "Dev Tools", "Exit"];
     let list_items: Vec<ListItem> = items
         .iter()
         .map(|i| ListItem::new(*i).style(Style::default().fg(Color::Gray)))

@@ -21,6 +21,7 @@ pub enum AppState {
     DevMenu,
     SkillTree,
     DeathScreen,
+    VictoryScreen,
 }
 
 #[derive(PartialEq)]
@@ -170,6 +171,11 @@ pub struct App {
     pub music_volume: f32,                   // Music volume 0.0 - 1.0
     pub sound_volume: f32,                   // Sound effects volume 0.0 - 1.0
     pub audio_manager: AudioManager,         // Audio playback manager
+    pub max_levels: u32,                     // Maximum levels before boss based on difficulty
+    pub is_boss_level: bool,                 // Whether current level is a boss fight
+    pub victory_win_time: f32,               // Time elapsed when victory occurred
+    pub last_weapon_pickup: Option<(String, crate::model::item_rarity::ItemRarity)>, // Weapon name and rarity
+    pub weapon_pickup_timer: f32, // Timer for weapon pickup notification display
 }
 
 impl App {
@@ -241,6 +247,38 @@ impl App {
             music_volume: 0.5,
             sound_volume: 0.5,
             audio_manager: audio_mgr,
+            max_levels: 5, // Default, will be updated when game starts
+            is_boss_level: false,
+            victory_win_time: 0.0,
+            last_weapon_pickup: None,
+            weapon_pickup_timer: 0.0,
+        }
+    }
+
+    /// Get the maximum number of levels before boss based on difficulty
+    pub fn get_max_levels_for_difficulty(&self) -> u32 {
+        use crate::model::item_tier::Difficulty;
+        match &self.settings.difficulty {
+            Difficulty::Easy => 5,
+            Difficulty::Normal => 10,
+            Difficulty::Hard => 15,
+            Difficulty::Death => 20,
+        }
+    }
+
+    /// Check if the current floor level is the boss level
+    pub fn is_current_level_boss(&self) -> bool {
+        self.floor_level == self.max_levels
+    }
+
+    /// Get difficulty scaling multiplier for enemy health and damage
+    pub fn get_enemy_difficulty_multiplier(&self) -> f32 {
+        use crate::model::item_tier::Difficulty;
+        match &self.settings.difficulty {
+            Difficulty::Easy => 0.8,
+            Difficulty::Normal => 1.0,
+            Difficulty::Hard => 1.4,
+            Difficulty::Death => 2.0,
         }
     }
 
@@ -312,7 +350,29 @@ impl App {
 
         let difficulty = self.settings.difficulty.clone();
         floor.spawn_random_items(10, &difficulty);
-        floor.spawn_enemies(&difficulty);
+
+        // Check if this is a boss level
+        if self.is_current_level_boss() {
+            // Spawn a boss instead of regular enemies
+            use crate::model::boss::BossType;
+            use rand::Rng;
+
+            let boss_types = [
+                BossType::GoblinOverlord,
+                BossType::SkeletalKnight,
+                BossType::FlameSorcerer,
+                BossType::ShadowAssassin,
+                BossType::CorruptedWarden,
+            ];
+
+            let random_boss = boss_types[rand::rng().random_range(0..boss_types.len())];
+            floor.spawn_boss(random_boss);
+            self.is_boss_level = true;
+        } else {
+            // Regular floor with normal enemies
+            floor.spawn_enemies(&difficulty);
+            self.is_boss_level = false;
+        }
 
         self.current_floor = Some(floor);
         self.player_has_acted = false; // Reset action state for new level
@@ -374,6 +434,10 @@ impl App {
             // Reset fade timer for death screen animation
             self.death_screen_fade_timer = 0.0;
 
+            // Play death sound and apply music muffling
+            self.audio_manager.play_sound_effect(SoundEffect::Death);
+            self.audio_manager.start_death_fade_out(1.0); // 1 second muffling fade
+
             // Transition to death screen
             self.state = AppState::DeathScreen;
         }
@@ -395,11 +459,16 @@ impl App {
         self.particle_system = ParticleSystem::new();
         self.is_paused = false;
 
+        // Set max levels based on selected difficulty
+        self.max_levels = self.get_max_levels_for_difficulty();
+        self.is_boss_level = false;
+
         // Reset stats
         self.game_started_at = Some(Instant::now());
         self.death_time_elapsed = 0.0;
         self.levels_passed_before_death = 0;
         self.death_screen_fade_timer = 0.0;
+        self.victory_win_time = 0.0;
 
         // Reset pause menu state
         self.pause_menu_selection = 0;
@@ -424,6 +493,11 @@ impl App {
     }
 
     pub fn move_character(&mut self, dx: i32, dy: i32) {
+        // Prevent movement while attacking to avoid animation desync
+        if self.character.is_attack_animating() {
+            return;
+        }
+
         self.movement_tick_counter += 1;
 
         let speed_adjusted_requirement = (crate::constants::PLAYER_MOVEMENT_TICKS_REQUIRED as f32
@@ -648,6 +722,7 @@ impl App {
 
     pub fn switch_weapon(&mut self, slot: usize) {
         self.character.weapon_inventory.switch_weapon(slot - 1);
+        self.audio_manager.play_sound_effect(SoundEffect::ItemEquip);
     }
 
     pub fn drop_weapon(&mut self, slot: usize) {
@@ -737,16 +812,24 @@ impl App {
                     match item.item_type {
                         ItemDropType::Consumable(consumable) => {
                             self.character.consumable_inventory.add(consumable);
-                            self.audio_manager.play_sound_effect(SoundEffect::PickedUpItem);
+                            self.audio_manager
+                                .play_sound_effect(SoundEffect::PickedUpItem);
                         }
                         ItemDropType::Gold(amount) => {
                             self.character.add_gold(amount);
-                            self.audio_manager.play_sound_effect(SoundEffect::PickedUpItem);
+                            self.audio_manager.play_gold_sound();
                         }
                         ItemDropType::Weapon(weapon) => {
                             if self.character.weapon_inventory.weapons.len() < 9 {
+                                // Store weapon pickup notification
+                                let weapon_name = format!("{:?}", weapon.weapon_type);
+                                self.last_weapon_pickup =
+                                    Some((weapon_name, weapon.rarity.clone()));
+                                self.weapon_pickup_timer = 3.0; // Show for 3 seconds
+
                                 self.character.weapon_inventory.add_weapon(weapon);
-                                self.audio_manager.play_sound_effect(SoundEffect::PickedUpItem);
+                                self.audio_manager
+                                    .play_sound_effect(SoundEffect::PickedUpItem);
                             } else {
                                 let weapon_item =
                                     crate::model::item::ItemDrop::weapon(weapon, char_x, char_y);
@@ -842,6 +925,15 @@ impl App {
 
     pub fn update_game_logic(&mut self) {
         let delta = (self.game_tick_rate_ms as f32) / 1000.0;
+
+        // Update weapon pickup notification timer
+        if self.weapon_pickup_timer > 0.0 {
+            self.weapon_pickup_timer -= delta;
+            if self.weapon_pickup_timer <= 0.0 {
+                self.last_weapon_pickup = None;
+            }
+        }
+
         self.character.status_effects.update(delta);
 
         // --- NEW: Update active animations ---
@@ -860,7 +952,7 @@ impl App {
         let damage = (self.character.status_effects.get_total_damage_per_sec() * delta) as i32;
         if damage > 0 {
             self.character.take_damage(damage);
-            self.audio_manager.play_sound_effect(SoundEffect::Damaged);
+            self.audio_manager.play_damaged_sound();
         }
 
         if self.character.knockback_velocity != (0.0, 0.0) {
@@ -968,7 +1060,9 @@ impl App {
                     let clamped_y = new_y.clamp(0, floor.height as i32 - 1);
 
                     // Try to move to clamped position if it's walkable and not the player's position
-                    if (clamped_x, clamped_y) != (player_pos.x, player_pos.y) && walkable_tiles.contains(&(clamped_x, clamped_y)) {
+                    if (clamped_x, clamped_y) != (player_pos.x, player_pos.y)
+                        && walkable_tiles.contains(&(clamped_x, clamped_y))
+                    {
                         enemy.position.x = clamped_x;
                         enemy.position.y = clamped_y;
                         // If knocked out of bounds, zero out knockback in that direction
@@ -980,8 +1074,12 @@ impl App {
                         }
                     } else {
                         // Try moving along each axis separately (respect directions), avoiding player
-                        let can_move_x = (clamped_x, enemy.position.y) != (player_pos.x, player_pos.y) && walkable_tiles.contains(&(clamped_x, enemy.position.y));
-                        let can_move_y = (enemy.position.x, clamped_y) != (player_pos.x, player_pos.y) && walkable_tiles.contains(&(enemy.position.x, clamped_y));
+                        let can_move_x = (clamped_x, enemy.position.y)
+                            != (player_pos.x, player_pos.y)
+                            && walkable_tiles.contains(&(clamped_x, enemy.position.y));
+                        let can_move_y = (enemy.position.x, clamped_y)
+                            != (player_pos.x, player_pos.y)
+                            && walkable_tiles.contains(&(enemy.position.x, clamped_y));
 
                         if can_move_x {
                             enemy.position.x = clamped_x;
@@ -1034,18 +1132,22 @@ impl App {
                     let new_y = enemy.position.y + dy;
 
                     // Check if target position is walkable AND not occupied by player
-                    if (new_x, new_y) != (player_pos.x, player_pos.y) && walkable_tiles.contains(&(new_x, new_y)) {
+                    if (new_x, new_y) != (player_pos.x, player_pos.y)
+                        && walkable_tiles.contains(&(new_x, new_y))
+                    {
                         enemy.position.x = new_x;
                         enemy.position.y = new_y;
                     } else {
                         // Try moving along each axis separately, but still avoid player
                         if dx != 0
-                            && (enemy.position.x + dx, enemy.position.y) != (player_pos.x, player_pos.y)
+                            && (enemy.position.x + dx, enemy.position.y)
+                                != (player_pos.x, player_pos.y)
                             && walkable_tiles.contains(&(enemy.position.x + dx, enemy.position.y))
                         {
                             enemy.position.x += dx;
                         } else if dy != 0
-                            && (enemy.position.x, enemy.position.y + dy) != (player_pos.x, player_pos.y)
+                            && (enemy.position.x, enemy.position.y + dy)
+                                != (player_pos.x, player_pos.y)
                             && walkable_tiles.contains(&(enemy.position.x, enemy.position.y + dy))
                         {
                             enemy.position.y += dy;
@@ -1095,7 +1197,12 @@ impl App {
                             crate::model::attack_pattern::AttackPattern::GroundSlam(1)
                         }
                         crate::model::enemy_type::EnemyRarity::Boss => {
-                            crate::model::attack_pattern::AttackPattern::WhirlwindAttack
+                            match enemy.attack_pattern_cycle {
+                                0 => crate::model::attack_pattern::AttackPattern::Fireball(3),
+                                1 => crate::model::attack_pattern::AttackPattern::GroundSlam(2),
+                                2 => crate::model::attack_pattern::AttackPattern::WhirlwindAttack,
+                                _ => crate::model::attack_pattern::AttackPattern::BasicSlash,
+                            }
                         }
                     };
 
@@ -1115,6 +1222,11 @@ impl App {
                     }
 
                     attacks_on_player.push((rarity_damage, dx, dy));
+
+                    // Cycle attack pattern for bosses
+                    if matches!(enemy.rarity, crate::model::enemy_type::EnemyRarity::Boss) {
+                        enemy.attack_pattern_cycle = (enemy.attack_pattern_cycle + 1) % 3;
+                    }
                 }
 
                 // Only register hits if player is in attack animation
@@ -1191,6 +1303,8 @@ impl App {
 
                     floor.enemies[idx].apply_knockback(dx, dy, knockback_force);
                     floor.enemies[idx].take_damage(damage);
+                    // Charge player's ultimate based on damage dealt
+                    self.character.charge_ultimate(damage);
                     // Play hit sound when enemy is damaged
                     self.audio_manager.play_sound_effect(SoundEffect::Hit);
                 }
@@ -1265,7 +1379,9 @@ impl App {
         for (attack_damage, dx, dy) in attacks_on_player {
             self.character.apply_knockback(dx, dy, 0.5);
             self.character.take_damage(attack_damage);
-            self.audio_manager.play_sound_effect(SoundEffect::Damaged);
+            // Player gains ultimate charge when damaged by enemies
+            self.character.charge_ultimate(attack_damage);
+            self.audio_manager.play_damaged_sound();
         }
 
         self.particle_system.update();
@@ -1276,11 +1392,25 @@ impl App {
         // Check if all enemies on current floor are defeated - advance to next floor
         if let Some(floor) = &self.current_floor {
             if floor.enemies.is_empty() && self.player_has_acted {
-                // All enemies defeated - play level advance sound and regenerate floor
-                self.audio_manager.play_sound_effect(SoundEffect::AdvanceLevel);
-                self.floor_level += 1;
-                self.player_has_acted = false;
-                self.regenerate_floor();
+                // All enemies defeated - check if this was the boss level
+                if self.is_boss_level {
+                    // Victory! All levels and boss defeated
+                    self.victory_win_time = if let Some(started_at) = self.game_started_at {
+                        started_at.elapsed().as_secs_f32()
+                    } else {
+                        0.0
+                    };
+                    self.state = AppState::VictoryScreen;
+                    self.audio_manager
+                        .play_sound_effect(SoundEffect::AdvanceLevel);
+                } else {
+                    // Play level advance sound and go to next floor
+                    self.audio_manager
+                        .play_sound_effect(SoundEffect::AdvanceLevel);
+                    self.floor_level += 1;
+                    self.player_has_acted = false;
+                    self.regenerate_floor();
+                }
             }
         }
     }
@@ -1300,32 +1430,62 @@ impl App {
     }
 
     #[allow(dead_code)]
-    pub fn save_game(&self, slot: u32) -> std::io::Result<()> {
+    pub fn save_game(&self) -> std::io::Result<()> {
+        use crate::model::gamesave::{GameSave, InventoryData};
+
+        let time = if let Some(started) = self.game_started_at {
+            started.elapsed().as_secs_f32()
+        } else {
+            0.0
+        };
+
         let save = GameSave {
+            player_name: self.char_name.clone(),
             player_stats: PlayerStats {
                 attack_damage: self.character.attack_damage,
                 attack_length: self.character.attack_length,
                 attack_width: self.character.attack_width,
                 dash_distance: self.character.dash_distance,
-                health: 100,
-                max_health: 100,
+                health: self.character.health,
+                max_health: self.character.health_max,
+                gold: self.character.gold,
+                enemies_killed: self.character.enemies_killed,
+            },
+            inventory_data: InventoryData {
+                weapon_slots: vec![None; 9], // Simplified for now
+                consumables: vec![],
             },
             floor_level: self.floor_level,
+            max_levels: self.max_levels,
             position_x: self.character_position.0,
             position_y: self.character_position.1,
+            difficulty: self.settings.difficulty.name().to_string(),
+            time_elapsed: time,
         };
-        save.save(slot)
+        save.save()
     }
 
-    #[allow(dead_code)]
-    pub fn load_game(&mut self, slot: u32) -> std::io::Result<()> {
-        let save = GameSave::load(slot)?;
+    pub fn load_game(&mut self, player_name: &str) -> std::io::Result<()> {
+        use crate::model::gamesave::GameSave;
+
+        let save = GameSave::load(player_name)?;
+
+        // Restore character stats
+        self.char_name = save.player_name.clone();
         self.character.attack_damage = save.player_stats.attack_damage;
         self.character.attack_length = save.player_stats.attack_length;
         self.character.attack_width = save.player_stats.attack_width;
         self.character.dash_distance = save.player_stats.dash_distance;
+        self.character.health = save.player_stats.health;
+        self.character.health_max = save.player_stats.max_health;
+        self.character.gold = save.player_stats.gold;
+        self.character.enemies_killed = save.player_stats.enemies_killed;
+
+        // Restore game state
         self.floor_level = save.floor_level;
+        self.max_levels = save.max_levels;
         self.character_position = (save.position_x, save.position_y);
+
         Ok(())
     }
 }
