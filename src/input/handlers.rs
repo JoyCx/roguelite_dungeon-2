@@ -578,14 +578,36 @@ pub fn handle_character_creation_input(app: &mut App, key: crossterm::event::Key
             KeyCode::Enter | KeyCode::Char(' ') => {
                 if app.char_creation_selection == 2 {
                     // Start the game
+                    // Reset character to fresh state for new game
+                    app.character = crate::model::character::Character::default();
                     app.character.name = app.char_name.clone();
+                    app.character_position = (0, 0);
+                    app.floor_level = 1;
+                    app.player_has_acted = false;
+                    app.current_floor = None;
+                    app.dev_seed_input = String::new();
+                    app.arrows.clear();
+                    app.active_animations.clear();
+                    app.particle_system = crate::model::particle::ParticleSystem::new();
+                    app.is_paused = false;
+                    app.death_screen_fade_timer = 0.0;
+
+                    // Set max levels based on selected difficulty
+                    app.max_levels = app.get_max_levels_for_difficulty();
+                    app.is_boss_level = false;
+
+                    // Initialize game time
+                    app.game_started_at = Some(std::time::Instant::now());
+                    app.death_time_elapsed = 0.0;
+                    app.levels_passed_before_death = 0;
+
+                    // Now generate the floor and find spawn position
                     app.regenerate_floor();
                     if let Some(floor) = &app.current_floor {
                         // Find a random spawn position in the main connected region
                         if let Some((x, y)) = floor.find_player_spawn() {
                             app.character_position = (x, y);
                             app.update_camera(); // Initialize camera position
-                            app.game_started_at = Some(std::time::Instant::now());
 
                             // Start music with fade-in for new game
                             let _ = app.audio_manager.start_music_with_fade_in();

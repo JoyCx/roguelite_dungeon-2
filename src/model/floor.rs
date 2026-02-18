@@ -25,6 +25,8 @@ pub struct Floor {
     pub tile_to_room: Vec<Option<RoomId>>,
     pub items: Vec<ItemDrop>,
     pub enemies: Vec<crate::model::enemy::Enemy>,
+    #[serde(skip)]
+    pub styled_tile_cache: Vec<(char, u8)>, // (glyph, color_index) - cache to avoid re-computing every frame
 }
 
 impl Floor {
@@ -38,9 +40,11 @@ impl Floor {
             tile_to_room: vec![None; (width * height) as usize],
             items: Vec::new(),
             enemies: Vec::new(),
+            styled_tile_cache: Vec::new(), // Will be populated after generation
         };
         floor.generate();
         floor.detect_rooms();
+        floor.rebuild_styled_tile_cache();
         floor
     }
 
@@ -354,6 +358,61 @@ impl Floor {
         }
 
         None
+    }
+
+    /// Pre-compute all styled tiles (glyph + color) to cache sprite generation
+    fn rebuild_styled_tile_cache(&mut self) {
+        let size = (self.width * self.height) as usize;
+        self.styled_tile_cache.clear();
+        self.styled_tile_cache.reserve(size);
+
+        for idx in 0..size {
+            let x = (idx as i32) % self.width;
+            let y = (idx as i32) / self.width;
+            let is_wall = self.tiles[idx];
+
+            let (ch, color_idx) = if is_wall {
+                let wall_chars = ['$', '#', '+', '*', '%', '=', '÷', '×'];
+                let seed = (x as u64) << 32 | (y as u64);
+                let mut rng = StdRng::seed_from_u64(seed);
+                let ch = wall_chars[rng.random_range(0..wall_chars.len())];
+
+                let nearby_floors = self.count_nearby_floors(x, y, 2);
+                let color_idx = match nearby_floors {
+                    0..=1 => 236,
+                    2..=3 => 238,
+                    4..=5 => 240,
+                    _ => 242,
+                };
+                (ch, color_idx)
+            } else {
+                let wall_proximity = self.count_walls_near(x, y, 1);
+                let color_idx = match wall_proximity {
+                    0..=2 => 246,
+                    3..=4 => 244,
+                    5..=6 => 242,
+                    7..=8 => 240,
+                    _ => 238,
+                };
+                ('.', color_idx)
+            };
+
+            self.styled_tile_cache.push((ch, color_idx));
+        }
+    }
+
+    /// Fast tile lookup from cache - use this in render loops
+    #[inline]
+    pub fn get_styled_tile_cached(&self, x: i32, y: i32) -> Option<(char, u8)> {
+        if x < 0 || x >= self.width || y < 0 || y >= self.height {
+            return None;
+        }
+        let idx = (y * self.width + x) as usize;
+        if idx < self.styled_tile_cache.len() {
+            Some(self.styled_tile_cache[idx])
+        } else {
+            None
+        }
     }
 
     pub fn styled_grid(&self) -> Vec<(i32, i32, char, Style)> {

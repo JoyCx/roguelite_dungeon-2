@@ -114,33 +114,54 @@ pub fn draw(f: &mut Frame, app: &mut App) {
                 let camera_x = app.camera_offset.0.floor() as i32;
                 let camera_y = app.camera_offset.1.floor() as i32;
 
-                // Get attack area for highlighting
-                let attack_area = app.get_attack_area();
+                // Get attack area for highlighting - convert to HashSet for O(1) lookups
+                let attack_area_set: std::collections::HashSet<_> =
+                    app.get_attack_area().into_iter().collect();
                 let is_attacking = app.character.is_attack_animating();
+
+                // Pre-allocate cached strings for common glyphs to avoid repeated allocations
+                let space_bullet = "·".to_string();
+                let dot_str = ".".to_string();
 
                 for screen_y in 0..viewport_height {
                     let world_y = camera_y + screen_y;
-                    let mut current_line = Vec::new();
+                    let mut current_line = Vec::with_capacity(viewport_width as usize);
 
                     for screen_x in 0..viewport_width {
                         let world_x = camera_x + screen_x;
 
-                        if let Some((ch, style)) = floor.get_styled_tile(world_x, world_y) {
-                            let glyph_str = if ch == ' ' {
-                                "·".to_string()
-                            } else {
-                                ch.to_string()
-                            };
-
+                        if let Some((ch, color_idx)) =
+                            floor.get_styled_tile_cached(world_x, world_y)
+                        {
                             // Highlight attack area in red if attacking
-                            let final_style =
-                                if is_attacking && attack_area.contains(&(world_x, world_y)) {
-                                    Style::default().fg(Color::Red).add_modifier(Modifier::BOLD)
-                                } else {
-                                    style
-                                };
+                            let is_attacked =
+                                is_attacking && attack_area_set.contains(&(world_x, world_y));
 
-                            current_line.push(Span::styled(glyph_str, final_style));
+                            if is_attacked {
+                                // Only allocate string if we need red highlighting
+                                let glyph_str = if ch == ' ' {
+                                    "·".to_string()
+                                } else {
+                                    ch.to_string()
+                                };
+                                current_line.push(Span::styled(
+                                    glyph_str,
+                                    Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+                                ));
+                            } else {
+                                // Use pre-rendered strings for non-highlighted tiles
+                                let glyph = if ch == ' ' {
+                                    space_bullet.clone()
+                                } else if ch == '.' {
+                                    dot_str.clone()
+                                } else {
+                                    ch.to_string()
+                                };
+                                current_line.push(Span::styled(
+                                    glyph,
+                                    Style::default().fg(Color::Indexed(color_idx)),
+                                ));
+                            }
                         } else {
                             current_line.push(Span::raw(" "));
                         }
@@ -245,14 +266,13 @@ pub fn draw(f: &mut Frame, app: &mut App) {
                 );
             }
             // Render cooldown bars in right panel
-            let bar_height = (right_panel_area.height as usize).saturating_sub(5) / 3;
             let panel_chunks = Layout::default()
                 .direction(Direction::Vertical)
                 .constraints([
-                    Constraint::Length(1),                 // Health info
-                    Constraint::Length(1),                 // Gold info
-                    Constraint::Length(bar_height as u16), // Cooldown bars
-                    Constraint::Min(0),                    // Inventory below
+                    Constraint::Length(1), // Health info
+                    Constraint::Length(1), // Gold info
+                    Constraint::Length(6), // Cooldown bars area
+                    Constraint::Min(0),    // Inventory below
                 ])
                 .split(right_panel_area);
 
@@ -267,7 +287,8 @@ pub fn draw(f: &mut Frame, app: &mut App) {
             // Gold info
             drawing::render_gold_info(f, panel_chunks[1], app.character.gold);
 
-            // Create horizontal layout for the 4 cooldown bars
+            // Create dedicated area for cooldown bars with border
+            let cooldown_area = panel_chunks[2];
             let bar_chunks = Layout::default()
                 .direction(Direction::Horizontal)
                 .constraints([
@@ -276,7 +297,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
                     Constraint::Percentage(25),
                     Constraint::Percentage(25),
                 ])
-                .split(panel_chunks[3]);
+                .split(cooldown_area);
 
             // Dash cooldown (vertical)
             let remaining_dash_cooldown = app.character.dash_cooldown_remaining();
@@ -343,7 +364,11 @@ pub fn draw(f: &mut Frame, app: &mut App) {
             drawing::render_weapon_slots(f, weapon_slots_area, &app.character.weapon_inventory);
 
             // Render weapon names tooltip
-            drawing::render_weapon_names_tooltip(f, weapon_names_area, &app.character.weapon_inventory);
+            drawing::render_weapon_names_tooltip(
+                f,
+                weapon_names_area,
+                &app.character.weapon_inventory,
+            );
 
             // Render empty slot warning if active
             drawing::render_empty_slot_warning(f, weapon_slots_area, app.empty_slot_message_timer);

@@ -1,0 +1,60 @@
+{
+  "player_name": "waewaea",
+  "player_stats": {
+    "attack_damage": 10,
+    "attack_length": 2,
+    "attack_width": 1,
+    "dash_distance": 5,
+    "health": 0,
+    "max_health": 100,
+    "gold": 50,
+    "enemies_killed": 4,
+    "speed": 5.0,
+    "ultimate_charge": 16.75
+  },
+  "inventory_data": {
+    "weapons": [
+      {
+        "weapon_type": "Sword",
+        "damage": 5,
+        "cooldown": 0.5,
+        "name": "Iron Sword",
+        "rarity": "Common",
+        "enchants": []
+      },
+      {
+        "weapon_type": "Bow",
+        "damage": 3,
+        "cooldown": 0.3,
+        "name": "Wood Bow",
+        "rarity": "Common",
+        "enchants": []
+      },
+      {
+        "weapon_type": "Staff",
+        "damage": 12,
+        "cooldown": 0.3,
+        "name": "Frost Staff",
+        "rarity": "Epic",
+        "enchants": []
+      }
+    ],
+    "current_weapon_index": 2,
+    "consumables": []
+  },
+  "skill_tree_data": {
+    "path_nodes": [],
+    "chosen_path": null
+  },
+  "ultimate_shop_data": {
+    "owned_ultimates": [],
+    "stat_upgrades": [],
+    "current_ultimate_type": "Shockwave"
+  },
+  "floor_level": 1,
+  "max_levels": 5,
+  "position_x": 55,
+  "position_y": 33,
+  "difficulty": "Normal",
+  "time_elapsed": 4.9371037
+}

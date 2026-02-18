@@ -139,6 +139,7 @@ pub struct App {
     pub scroll_target: f32,
     pub dev_seed_input: String,
     pub current_floor: Option<Floor>,
+    pub walkable_tiles_cache: Option<std::collections::HashSet<(i32, i32)>>,
     pub character_position: (i32, i32),
     pub character: Character,
     pub terminal_size: (u16, u16),
@@ -223,6 +224,7 @@ impl App {
             frame_count: 0,
             dev_seed_input: String::new(),
             current_floor: None,
+            walkable_tiles_cache: None,
             character_position: (0, 0),
             character: Character::default(),
             terminal_size: (0, 0),
@@ -401,6 +403,7 @@ impl App {
         }
 
         self.current_floor = Some(floor);
+        self.walkable_tiles_cache = None; // Invalidate cache for new floor
         self.player_has_acted = false; // Reset action state for new level
 
         if let Some(floor) = &self.current_floor {
@@ -473,6 +476,9 @@ impl App {
             };
             self.levels_passed_before_death = self.floor_level.saturating_sub(1);
 
+            // Auto-save the current game state before death (for retry floor functionality)
+            self.auto_save();
+
             // Reset fade timer for death screen animation
             self.death_screen_fade_timer = 0.0;
 
@@ -528,19 +534,26 @@ impl App {
     }
 
     pub fn retry_current_floor(&mut self) {
-        // Keep current floor level and character state, just reset health and position
-        self.character_position = (0, 0);
+        // Clone player name to avoid borrow conflicts
+        let player_name = self.char_name.clone();
+
+        // Reload the saved game state to retry the current floor
+        // This restores character, inventory, position, and game state
+        let _ = self.load_game(&player_name);
+
+        // Restore health to max for the retry
         self.character.health = self.character.health_max;
+
+        // Regenerate the floor with the saved floor level
+        self.regenerate_floor();
+
+        // Restore game state flags
         self.player_has_acted = false;
-        self.current_floor = None;
+        self.is_paused = false;
+        self.death_screen_fade_timer = 0.0;
         self.arrows.clear();
         self.active_animations.clear();
         self.particle_system = ParticleSystem::new();
-        self.is_paused = false;
-        self.death_screen_fade_timer = 0.0;
-
-        // Regenerate the same floor
-        self.regenerate_floor();
 
         // Restart music with fade-in
         let _ = self.audio_manager.start_music_with_fade_in();
@@ -1002,7 +1015,8 @@ impl App {
                     self.attack();
                 }
                 crate::model::weapon::WeaponType::Staff => {
-                    self.shoot();
+                    // Staffs use attack patterns (Fireball, Frost Nova, etc.), not arrows
+                    self.attack();
                 }
             }
         }
@@ -1161,8 +1175,26 @@ impl App {
         }
     }
 
+    /// Ensure walkable tiles cache is populated for the current floor
+    fn ensure_walkable_tiles_cache(&mut self) {
+        if self.walkable_tiles_cache.is_none() {
+            if let Some(floor) = &self.current_floor {
+                let walkable_tiles: std::collections::HashSet<(i32, i32)> = (0..floor.width)
+                    .flat_map(|x| (0..floor.height).map(move |y| (x, y)))
+                    .filter(|(x, y)| floor.is_walkable(*x, *y))
+                    .collect();
+                self.walkable_tiles_cache = Some(walkable_tiles);
+            }
+        }
+    }
+
     pub fn update_game_logic(&mut self) {
         let delta = (self.game_tick_rate_ms as f32) / 1000.0;
+
+        // Ensure walkable tiles cache is populated for enemy AI calculations
+        if self.state == AppState::Game {
+            self.ensure_walkable_tiles_cache();
+        }
 
         // Auto-save every 30 seconds during gameplay
         if self.state == AppState::Game {
@@ -1279,6 +1311,9 @@ impl App {
             vec![]
         };
 
+        // Build walkable tiles cache before borrowing floor mutably
+        self.ensure_walkable_tiles_cache();
+
         if let Some(floor) = &mut self.current_floor {
             floor.update_items(delta);
 
@@ -1292,10 +1327,7 @@ impl App {
                 }
             }
 
-            let walkable_tiles: std::collections::HashSet<(i32, i32)> = (0..floor.width)
-                .flat_map(|x| (0..floor.height).map(move |y| (x, y)))
-                .filter(|(x, y)| floor.is_walkable(*x, *y))
-                .collect();
+            let walkable_tiles = self.walkable_tiles_cache.as_ref().unwrap();
 
             for (enemy_idx, enemy) in floor.enemies.iter_mut().enumerate() {
                 if !enemy.is_alive() {
