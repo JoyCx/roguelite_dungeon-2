@@ -20,6 +20,10 @@ pub fn draw(f: &mut Frame, app: &mut App) {
 
     match app.state {
         AppState::MainMenu => main_menu::draw(f, app, area, pulse_color),
+        AppState::SaveSelection => {
+            // Draw save selection menu with similar styling to main menu
+            main_menu::draw_save_selection(f, app, area, pulse_color)
+        }
         AppState::CharacterCreation => character_creation::draw(f, app, area, pulse_color),
         AppState::Settings => settings::draw(f, app, area, pulse_color),
         AppState::UltimateShop => {
@@ -77,14 +81,21 @@ pub fn draw(f: &mut Frame, app: &mut App) {
 
             app.update_terminal_size(area.width, area.height);
 
-            // Split into game area and bottom bar, then split right side into panel
+            // Split into game area, ultimate bar, and weapon slots at bottom
             let vertical_chunks = Layout::default()
                 .direction(Direction::Vertical)
-                .constraints([Constraint::Min(0), Constraint::Length(2)])
+                .constraints([
+                    Constraint::Min(0),
+                    Constraint::Length(2),
+                    Constraint::Length(1),
+                    Constraint::Length(2),
+                ])
                 .split(area);
 
             let game_and_panel_area = vertical_chunks[0];
             let ultimate_bar_area = vertical_chunks[1];
+            let weapon_slots_area = vertical_chunks[2];
+            let weapon_names_area = vertical_chunks[3];
 
             // Split game area and right panel
             let horizontal_chunks = Layout::default()
@@ -238,7 +249,6 @@ pub fn draw(f: &mut Frame, app: &mut App) {
             let panel_chunks = Layout::default()
                 .direction(Direction::Vertical)
                 .constraints([
-                    Constraint::Length(1),                 // Weapon info
                     Constraint::Length(1),                 // Health info
                     Constraint::Length(1),                 // Gold info
                     Constraint::Length(bar_height as u16), // Cooldown bars
@@ -246,21 +256,16 @@ pub fn draw(f: &mut Frame, app: &mut App) {
                 ])
                 .split(right_panel_area);
 
-            // Weapon info
-            if let Some(weapon) = app.character.weapon_inventory.get_current_weapon() {
-                drawing::render_weapon_info(f, panel_chunks[0], &weapon.name);
-            }
-
             // Health info
             drawing::render_health_info(
                 f,
-                panel_chunks[1],
+                panel_chunks[0],
                 app.character.health,
                 app.character.health_max,
             );
 
             // Gold info
-            drawing::render_gold_info(f, panel_chunks[2], app.character.gold);
+            drawing::render_gold_info(f, panel_chunks[1], app.character.gold);
 
             // Create horizontal layout for the 4 cooldown bars
             let bar_chunks = Layout::default()
@@ -320,7 +325,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
             // Inventory display below cooldowns
             drawing::render_consumables_info(
                 f,
-                panel_chunks[4],
+                panel_chunks[3],
                 &app.character.consumable_inventory,
                 app.inventory_focused,
                 app.inventory_scroll_index,
@@ -333,6 +338,15 @@ pub fn draw(f: &mut Frame, app: &mut App) {
                 ultimate_bar_area,
                 app.character.ultimate_charge,
             );
+
+            // Render weapon slots bar
+            drawing::render_weapon_slots(f, weapon_slots_area, &app.character.weapon_inventory);
+
+            // Render weapon names tooltip
+            drawing::render_weapon_names_tooltip(f, weapon_names_area, &app.character.weapon_inventory);
+
+            // Render empty slot warning if active
+            drawing::render_empty_slot_warning(f, weapon_slots_area, app.empty_slot_message_timer);
 
             // Render item description popup if showing
             if app.showing_item_description {

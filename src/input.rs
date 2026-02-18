@@ -7,6 +7,7 @@ pub mod menu;
 pub fn handle_input(app: &mut App, key: KeyEvent) {
     match app.state {
         AppState::MainMenu => handlers::handle_main_menu_input(app, key),
+        AppState::SaveSelection => handlers::handle_save_selection_input(app, key),
         AppState::CharacterCreation => handlers::handle_character_creation_input(app, key),
         AppState::Settings => handlers::handle_settings_input(app, key),
         AppState::Game => handlers::handle_game_input(app, key),

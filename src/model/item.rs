@@ -77,7 +77,28 @@ impl ItemDrop {
         match &self.item_type {
             ItemDropType::Consumable(c) => c.name.clone(),
             ItemDropType::Gold(amount) => format!("{} gold", amount),
-            ItemDropType::Weapon(w) => format!("{} ({})", w.name, w.damage),
+            ItemDropType::Weapon(w) => {
+                let mut desc = format!("{} ({})", w.name, w.damage);
+                if !w.enchants.is_empty() {
+                    desc.push_str(" [");
+                    for (i, enchant) in w.enchants.iter().enumerate() {
+                        if i > 0 {
+                            desc.push_str(", ");
+                        }
+                        let enchant_text = match enchant.enchant_type {
+                            crate::model::weapon::EnchantType::DamageIncrease => {
+                                format!("+{} DMG", enchant.value)
+                            }
+                            crate::model::weapon::EnchantType::RadiusIncrease => {
+                                format!("+{} R", enchant.value)
+                            }
+                        };
+                        desc.push_str(&enchant_text);
+                    }
+                    desc.push(']');
+                }
+                desc
+            }
         }
     }
 

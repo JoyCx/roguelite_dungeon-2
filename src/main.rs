@@ -92,6 +92,10 @@ where
         }
 
         if app.should_quit {
+            // Save the game before quitting if in game state
+            if app.state == app::AppState::Game {
+                let _ = app.save_game();
+            }
             return Ok(());
         }
     }

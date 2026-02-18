@@ -7,6 +7,8 @@ pub struct GameSave {
     pub player_name: String,
     pub player_stats: PlayerStats,
     pub inventory_data: InventoryData,
+    pub skill_tree_data: SkillTreeData,
+    pub ultimate_shop_data: UltimateShopData,
     pub floor_level: u32,
     pub max_levels: u32,
     pub position_x: i32,
@@ -25,12 +27,62 @@ pub struct PlayerStats {
     pub max_health: i32,
     pub gold: u32,
     pub enemies_killed: u32,
+    pub speed: f32,
+    pub ultimate_charge: f32,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct InventoryData {
-    pub weapon_slots: Vec<Option<String>>, // Weapon serialization
-    pub consumables: Vec<String>,           // Consumable serialization
+    pub weapons: Vec<WeaponData>,
+    pub current_weapon_index: usize,
+    pub consumables: Vec<ConsumableData>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct WeaponData {
+    pub weapon_type: String,
+    pub damage: i32,
+    pub cooldown: f32,
+    pub name: String,
+    pub rarity: String,
+    pub enchants: Vec<EnchantData>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct EnchantData {
+    pub enchant_type: String,
+    pub value: i32,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct ConsumableData {
+    pub consumable_type: String,
+    pub quantity: u32,
+    pub name: String,
+    pub description: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct SkillTreeData {
+    pub path_nodes: Vec<PathNodeData>,
+    pub chosen_path: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct PathNodeData {
+    pub path_type: String,
+    pub level: u32,
+    pub total_cost: u32,
+    pub health_multiplier: f32,
+    pub damage_multiplier: f32,
+    pub speed_multiplier: f32,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct UltimateShopData {
+    pub owned_ultimates: Vec<String>,
+    pub stat_upgrades: Vec<(String, u32)>,
+    pub current_ultimate_type: String,
 }
 
 impl Default for PlayerStats {
@@ -44,6 +96,8 @@ impl Default for PlayerStats {
             max_health: 100,
             gold: 0,
             enemies_killed: 0,
+            speed: 100.0,
+            ultimate_charge: 0.0,
         }
     }
 }
@@ -51,8 +105,28 @@ impl Default for PlayerStats {
 impl Default for InventoryData {
     fn default() -> Self {
         Self {
-            weapon_slots: vec![None; 9],
+            weapons: vec![],
+            current_weapon_index: 0,
             consumables: Vec::new(),
+        }
+    }
+}
+
+impl Default for SkillTreeData {
+    fn default() -> Self {
+        Self {
+            path_nodes: vec![],
+            chosen_path: None,
+        }
+    }
+}
+
+impl Default for UltimateShopData {
+    fn default() -> Self {
+        Self {
+            owned_ultimates: vec![],
+            stat_upgrades: vec![],
+            current_ultimate_type: "Shockwave".to_string(),
         }
     }
 }
@@ -63,6 +137,8 @@ impl Default for GameSave {
             player_name: "Player".to_string(),
             player_stats: PlayerStats::default(),
             inventory_data: InventoryData::default(),
+            skill_tree_data: SkillTreeData::default(),
+            ultimate_shop_data: UltimateShopData::default(),
             floor_level: 1,
             max_levels: 10,
             position_x: 0,
@@ -86,7 +162,9 @@ impl GameSave {
     pub fn save(&self) -> std::io::Result<()> {
         Self::ensure_saves_dir()?;
         // Sanitize player name for filename
-        let safe_name = self.player_name.chars()
+        let safe_name = self
+            .player_name
+            .chars()
             .map(|c| if c.is_alphanumeric() { c } else { '_' })
             .collect::<String>();
         let path = format!("saves/{}.json", safe_name);
@@ -97,7 +175,8 @@ impl GameSave {
     /// Load game by player name
     pub fn load(player_name: &str) -> std::io::Result<Self> {
         // Sanitize player name for filename
-        let safe_name = player_name.chars()
+        let safe_name = player_name
+            .chars()
             .map(|c| if c.is_alphanumeric() { c } else { '_' })
             .collect::<String>();
         let path = format!("saves/{}.json", safe_name);
@@ -129,7 +208,8 @@ impl GameSave {
 
     /// Check if save exists
     pub fn save_exists(player_name: &str) -> bool {
-        let safe_name = player_name.chars()
+        let safe_name = player_name
+            .chars()
             .map(|c| if c.is_alphanumeric() { c } else { '_' })
             .collect::<String>();
         let path = format!("saves/{}.json", safe_name);

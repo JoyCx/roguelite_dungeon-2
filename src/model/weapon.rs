@@ -702,7 +702,7 @@ impl Weapon {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct WeaponInventory {
     pub weapons: Vec<Weapon>,
     pub current_weapon_index: usize,

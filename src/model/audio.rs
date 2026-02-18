@@ -489,6 +489,15 @@ impl AudioManager {
             }
         }
     }
+
+    /// Stop all sound effects (used for interrupting/killing existing sounds)
+    pub fn stop_sound_effects(&mut self) {
+        if let Some(sink) = &self.effects_sink {
+            if let Ok(sink_guard) = sink.lock() {
+                sink_guard.stop();
+            }
+        }
+    }
 }
 
 impl Default for AudioManager {

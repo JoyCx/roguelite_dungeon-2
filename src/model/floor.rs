@@ -729,6 +729,7 @@ impl Floor {
                     enemy.rarity = template.rarity.clone();
                     enemy.base_gold = template.rarity.calculate_gold_drop(difficulty);
                     enemy.detection_radius = template.rarity.calculate_detection_radius(difficulty);
+                    enemy.attacks = template.attacks.clone();
 
                     self.enemies.push(enemy);
                     spawned += 1;
@@ -835,7 +836,15 @@ impl Floor {
 
             if let Some((x, y)) = best_pos {
                 let boss = BossEnemy::new(x, y, boss_type);
-                self.enemies.push(boss.base_enemy.clone());
+                // Convert boss attack patterns to enemy attacks with appropriate damage
+                let base_damage = boss.get_effective_damage();
+                let attacks = crate::model::boss::convert_attack_patterns_to_enemy_attacks(
+                    &boss.attack_patterns,
+                    base_damage,
+                );
+                let mut base_enemy = boss.base_enemy.clone();
+                base_enemy.attacks = attacks;
+                self.enemies.push(base_enemy);
                 return Some(boss);
             }
         }

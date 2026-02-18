@@ -99,3 +99,84 @@ fn render_logo_layer(
         );
     }
 }
+
+pub fn draw_save_selection(f: &mut Frame, app: &mut App, area: Rect, pulse_color: Color) {
+    // Draw dark background
+    f.render_widget(Clear, area);
+    f.render_widget(
+        Block::default().style(Style::default().bg(Color::Black)),
+        area,
+    );
+
+    // Draw title
+    let title = Paragraph::new("SELECT SAVE FILE")
+        .style(
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
+        )
+        .alignment(Alignment::Center);
+    let title_area = Rect {
+        x: area.x,
+        y: area.y + 2,
+        width: area.width,
+        height: 1,
+    };
+    f.render_widget(title, title_area);
+
+    if app.available_saves.is_empty() {
+        // Show "No saves" message
+        let no_saves = Paragraph::new("No save files found")
+            .style(Style::default().fg(Color::Red))
+            .alignment(Alignment::Center);
+        let no_saves_area = Rect {
+            x: area.x,
+            y: area.y + area.height / 2,
+            width: area.width,
+            height: 1,
+        };
+        f.render_widget(no_saves, no_saves_area);
+    } else {
+        // Draw list of saves
+        let list_items: Vec<ListItem> = app
+            .available_saves
+            .iter()
+            .map(|name| ListItem::new(name.clone()).style(Style::default().fg(Color::Gray)))
+            .collect();
+
+        let list = List::new(list_items)
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .title(" SAVES ")
+                    .title_alignment(Alignment::Center),
+            )
+            .highlight_style(
+                Style::default()
+                    .bg(pulse_color)
+                    .fg(Color::White)
+                    .add_modifier(Modifier::BOLD),
+            )
+            .highlight_symbol(" >> ");
+
+        let list_width = 40.min(area.width.saturating_sub(4));
+        let list_height = (app.available_saves.len() as u16 + 2).min(area.height.saturating_sub(8));
+
+        let list_area = Rect {
+            x: (area.width.saturating_sub(list_width)) / 2,
+            y: area.y + 5,
+            width: list_width,
+            height: list_height,
+        };
+
+        f.render_stateful_widget(list, list_area, &mut app.save_selection_state);
+    }
+
+    // Draw hints
+    let hints = vec![
+        ("W/S", "Navigate", Some(Color::Yellow)),
+        ("ENTER", "Load", Some(Color::Cyan)),
+        ("ESC", "Back", Some(Color::Red)),
+    ];
+    super::drawing::render_key_hints(f, area, hints);
+}

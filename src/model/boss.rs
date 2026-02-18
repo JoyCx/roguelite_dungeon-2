@@ -297,6 +297,163 @@ impl BossEnemy {
     }
 }
 
+/// Helper function to convert attack patterns to enemy attacks with reasonable defaults
+pub fn convert_attack_patterns_to_enemy_attacks(
+    patterns: &[AttackPattern],
+    damage_base: i32,
+) -> Vec<crate::model::enemy_type::EnemyAttack> {
+    use crate::model::enemy_type::{AttackType, EnemyAttack};
+
+    patterns
+        .iter()
+        .enumerate()
+        .map(|(idx, pattern)| {
+            let (name, damage_min, damage_max, attack_type, reach, area_radius, cooldown) =
+                match pattern {
+                    AttackPattern::BasicSlash => (
+                        "Basic Slash".to_string(),
+                        damage_base,
+                        damage_base + 5,
+                        AttackType::Physical,
+                        1,
+                        0,
+                        2.0,
+                    ),
+                    AttackPattern::GroundSlam(reach_val) => (
+                        "Ground Slam".to_string(),
+                        (damage_base as f32 * 1.2) as i32,
+                        (damage_base as f32 * 1.5) as i32,
+                        AttackType::Physical,
+                        *reach_val,
+                        1,
+                        3.0,
+                    ),
+                    AttackPattern::WhirlwindAttack => (
+                        "Whirlwind Attack".to_string(),
+                        (damage_base as f32 * 0.9) as i32,
+                        (damage_base as f32 * 1.3) as i32,
+                        AttackType::Physical,
+                        2,
+                        1,
+                        2.5,
+                    ),
+                    AttackPattern::SwordThrust(reach_val) => (
+                        "Sword Thrust".to_string(),
+                        (damage_base as f32 * 1.3) as i32,
+                        (damage_base as f32 * 1.7) as i32,
+                        AttackType::Physical,
+                        *reach_val,
+                        0,
+                        2.5,
+                    ),
+                    AttackPattern::Fireball(radius) => (
+                        "Fireball".to_string(),
+                        (damage_base as f32 * 1.4) as i32,
+                        (damage_base as f32 * 1.8) as i32,
+                        AttackType::Fire,
+                        *radius,
+                        2,
+                        3.0,
+                    ),
+                    AttackPattern::MeteorShower(reach_val, _width) => (
+                        "Meteor Shower".to_string(),
+                        (damage_base as f32 * 1.5) as i32,
+                        (damage_base as f32 * 2.0) as i32,
+                        AttackType::Fire,
+                        *reach_val,
+                        2,
+                        3.5,
+                    ),
+                    AttackPattern::ChainLightning(reach_val) => (
+                        "Chain Lightning".to_string(),
+                        (damage_base as f32 * 1.2) as i32,
+                        (damage_base as f32 * 1.6) as i32,
+                        AttackType::Magic,
+                        *reach_val,
+                        1,
+                        3.0,
+                    ),
+                    AttackPattern::FrostNova(reach_val) => (
+                        "Frost Nova".to_string(),
+                        (damage_base as f32 * 1.1) as i32,
+                        (damage_base as f32 * 1.4) as i32,
+                        AttackType::Magic,
+                        *reach_val,
+                        1,
+                        2.5,
+                    ),
+                    AttackPattern::ArrowShot(reach_val) => (
+                        "Arrow Shot".to_string(),
+                        damage_base,
+                        damage_base + 4,
+                        AttackType::Physical,
+                        *reach_val,
+                        0,
+                        2.0,
+                    ),
+                    AttackPattern::MultiShot(reach_val, _spread) => (
+                        "Multi Shot".to_string(),
+                        (damage_base as f32 * 0.8) as i32,
+                        (damage_base as f32 * 1.1) as i32,
+                        AttackType::Physical,
+                        *reach_val,
+                        1,
+                        2.5,
+                    ),
+                    AttackPattern::Barrage(reach_val) => (
+                        "Barrage".to_string(),
+                        (damage_base as f32 * 0.7) as i32,
+                        (damage_base as f32 * 1.0) as i32,
+                        AttackType::Physical,
+                        *reach_val,
+                        0,
+                        2.0,
+                    ),
+                    AttackPattern::PiercingShot(reach_val) => (
+                        "Piercing Shot".to_string(),
+                        (damage_base as f32 * 1.2) as i32,
+                        (damage_base as f32 * 1.5) as i32,
+                        AttackType::Physical,
+                        *reach_val,
+                        0,
+                        2.5,
+                    ),
+                    AttackPattern::CrescentSlash => (
+                        "Crescent Slash".to_string(),
+                        (damage_base as f32 * 1.1) as i32,
+                        (damage_base as f32 * 1.4) as i32,
+                        AttackType::Physical,
+                        2,
+                        0,
+                        2.5,
+                    ),
+                    AttackPattern::Vortex(radius) => (
+                        "Vortex".to_string(),
+                        (damage_base as f32 * 1.3) as i32,
+                        (damage_base as f32 * 1.6) as i32,
+                        AttackType::Magic,
+                        *radius,
+                        1,
+                        3.0,
+                    ),
+                };
+
+            EnemyAttack {
+                name,
+                damage_min,
+                damage_max,
+                attack_type,
+                reach,
+                area_radius,
+                effect: None,
+                cooldown_duration: cooldown,
+                cooldown_remaining: 0.0,
+                pattern: pattern.clone(),
+            }
+        })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

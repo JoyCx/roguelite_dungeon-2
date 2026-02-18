@@ -29,22 +29,64 @@ pub fn handle_main_menu_input(app: &mut App, key: crossterm::event::KeyEvent) {
                     app.settings.difficulty = app.settings.default_difficulty.clone();
                 }
                 Some(1) => {
-                    // Load Save - show load save menu
-                    crate::ui::victory_screen::handle_input(app, KeyCode::Esc); // Placeholder
+                    // Load Save - transition to save selection screen (always, even with no saves)
                     if let Ok(saves) = crate::model::gamesave::GameSave::list_saves() {
-                        if !saves.is_empty() {
-                            if let Ok(()) = app.load_game(&saves[0]) {
-                                app.state = AppState::Game;
-                                app.restart_game();
-                            }
-                        }
+                        app.available_saves = saves;
+                    } else {
+                        app.available_saves.clear();
                     }
+                    app.save_selection_state.select(Some(0));
+                    app.state = AppState::SaveSelection;
                 }
                 Some(2) => app.state = AppState::Settings,
                 Some(3) => app.state = AppState::DevMenu,
                 Some(4) => app.should_quit = true,
                 _ => {}
             }
+        }
+        _ => {}
+    }
+}
+
+pub fn handle_save_selection_input(app: &mut App, key: crossterm::event::KeyEvent) {
+    match key.code {
+        KeyCode::Up | KeyCode::Char('w') | KeyCode::Char('W') => {
+            super::menu::move_selection_up(
+                &mut app.save_selection_state,
+                app.available_saves.len(),
+            );
+            app.audio_manager.play_sound_effect(SoundEffect::MenuSwitch);
+        }
+        KeyCode::Down | KeyCode::Char('s') | KeyCode::Char('S') => {
+            super::menu::move_selection_down(
+                &mut app.save_selection_state,
+                app.available_saves.len(),
+            );
+            app.audio_manager.play_sound_effect(SoundEffect::MenuSwitch);
+        }
+        KeyCode::Enter | KeyCode::Char(' ') => {
+            app.audio_manager.play_sound_effect(SoundEffect::MenuPick);
+            if let Some(index) = app.save_selection_state.selected() {
+                if index < app.available_saves.len() {
+                    let save_name = app.available_saves[index].clone();
+                    // Try to load the game - proceed regardless due to errors
+                    let _ = app.load_game(&save_name);
+
+                    // Always transition to Game state
+                    app.state = AppState::Game;
+                    app.arrows.clear();
+                    app.active_animations.clear();
+                    app.particle_system = crate::model::particle::ParticleSystem::new();
+                    app.is_paused = false;
+                    app.regenerate_floor();
+                    app.audio_manager.stop_music();
+                    let _ = app.audio_manager.start_music_with_fade_in();
+                }
+            }
+        }
+        KeyCode::Esc => {
+            app.audio_manager.play_sound_effect(SoundEffect::MenuSwitch);
+            app.state = AppState::MainMenu;
         }
         _ => {}
     }
@@ -297,8 +339,6 @@ pub fn handle_game_input(app: &mut App, key: crossterm::event::KeyEvent) {
                 app.inventory_focused = true;
             } else if key.code == KeyCode::Char('f') || key.code == KeyCode::Char('F') {
                 app.block();
-            } else if key.code == KeyCode::Char('h') || key.code == KeyCode::Char('H') {
-                app.cycle_dev_attack_pattern();
             } else if key.code == KeyCode::Char('t') || key.code == KeyCode::Char('T') {
                 // Open skill tree during gameplay
                 app.previous_state = Some(AppState::Game);

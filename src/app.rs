@@ -18,6 +18,7 @@ use std::time::Instant;
 #[derive(Clone, Copy, PartialEq)]
 pub enum AppState {
     MainMenu,
+    SaveSelection,
     CharacterCreation,
     Settings,
     Game,
@@ -180,8 +181,12 @@ pub struct App {
     pub victory_win_time: f32,               // Time elapsed when victory occurred
     pub last_weapon_pickup: Option<(String, crate::model::item_rarity::ItemRarity)>, // Weapon name and rarity
     pub weapon_pickup_timer: f32, // Timer for weapon pickup notification display
+    pub empty_slot_message_timer: f32, // Timer for empty weapon slot warning message
     pub ultimate_shop: UltimateShop, // The shop system for ultimates and upgrades
     pub ultimate_shop_ui: UltimateShopUI, // UI state for the ultimate shop
+    pub save_selection_state: ListState, // For save selection menu navigation
+    pub available_saves: Vec<String>, // List of available save files
+    pub auto_save_timer: f32,     // Timer for auto-saving the game
 }
 
 impl App {
@@ -193,6 +198,8 @@ impl App {
         set_s.select(Some(0));
         let mut pause_s = ListState::default();
         pause_s.select(Some(0));
+        let mut save_s = ListState::default();
+        save_s.select(Some(0));
 
         let now = Instant::now();
         let mut audio_mgr = AudioManager::new();
@@ -258,8 +265,12 @@ impl App {
             victory_win_time: 0.0,
             last_weapon_pickup: None,
             weapon_pickup_timer: 0.0,
+            empty_slot_message_timer: 0.0,
             ultimate_shop: UltimateShop::new(),
             ultimate_shop_ui: UltimateShopUI::new(),
+            save_selection_state: save_s,
+            available_saves: Vec::new(),
+            auto_save_timer: 0.0,
         }
     }
 
@@ -353,7 +364,14 @@ impl App {
     }
 
     pub fn regenerate_floor(&mut self) {
-        let seed = self.dev_seed_input.parse::<u64>().unwrap_or(0);
+        // Use a random seed if dev_seed_input is empty, otherwise use the specified seed
+        let seed = if self.dev_seed_input.is_empty() {
+            use rand::{Rng, RngExt};
+            rand::rng().random_range(0..=u64::MAX)
+        } else {
+            self.dev_seed_input.parse::<u64>().unwrap_or(0)
+        };
+
         let mut floor = Floor::new(180, 60, seed);
 
         let difficulty = self.settings.difficulty.clone();
@@ -428,6 +446,22 @@ impl App {
         }
     }
 
+    /// Check if a position is walkable for arrows (ignores enemy positions, only checks walls/boundaries)
+    pub fn is_walkable_for_arrow(&self, x: i32, y: i32) -> bool {
+        if let Some(floor) = &self.current_floor {
+            // Hard boundary check - prevent any movement out of bounds
+            if x < 0 || x >= floor.width || y < 0 || y >= floor.height {
+                return false;
+            }
+
+            // Check if floor tile is walkable (but don't check for enemies)
+            // Arrows should pass through enemies to hit them
+            floor.is_walkable(x, y)
+        } else {
+            true
+        }
+    }
+
     /// Check if the player is dead and transition to death screen if necessary
     pub fn check_and_handle_death(&mut self) {
         if self.character.health <= 0 && self.state == AppState::Game {
@@ -477,6 +511,7 @@ impl App {
         self.levels_passed_before_death = 0;
         self.death_screen_fade_timer = 0.0;
         self.victory_win_time = 0.0;
+        self.empty_slot_message_timer = 0.0;
 
         // Reset pause menu state
         self.pause_menu_selection = 0;
@@ -490,6 +525,127 @@ impl App {
 
         // Transition to game state
         self.state = AppState::Game;
+    }
+
+    pub fn retry_current_floor(&mut self) {
+        // Keep current floor level and character state, just reset health and position
+        self.character_position = (0, 0);
+        self.character.health = self.character.health_max;
+        self.player_has_acted = false;
+        self.current_floor = None;
+        self.arrows.clear();
+        self.active_animations.clear();
+        self.particle_system = ParticleSystem::new();
+        self.is_paused = false;
+        self.death_screen_fade_timer = 0.0;
+
+        // Regenerate the same floor
+        self.regenerate_floor();
+
+        // Restart music with fade-in
+        let _ = self.audio_manager.start_music_with_fade_in();
+
+        // Transition to game state
+        self.state = AppState::Game;
+    }
+
+    pub fn auto_save(&mut self) {
+        // Save current game state
+        let game_save = self.create_game_save();
+        let _ = game_save.save();
+    }
+
+    fn create_game_save(&self) -> GameSave {
+        use crate::model::gamesave::*;
+        use crate::model::weapon::EnchantType as WEnchantType;
+
+        let player_stats = PlayerStats {
+            attack_damage: self.character.attack_damage,
+            attack_length: self.character.attack_length,
+            attack_width: self.character.attack_width,
+            dash_distance: self.character.dash_distance,
+            health: self.character.health,
+            max_health: self.character.health_max,
+            gold: self.character.gold,
+            enemies_killed: self.character.enemies_killed,
+            speed: self.character.speed,
+            ultimate_charge: self.character.ultimate_charge,
+        };
+
+        let weapons = self
+            .character
+            .weapon_inventory
+            .weapons
+            .iter()
+            .map(|w| {
+                let enchants = w
+                    .enchants
+                    .iter()
+                    .map(|e| crate::model::gamesave::EnchantData {
+                        enchant_type: match e.enchant_type {
+                            WEnchantType::DamageIncrease => "DamageIncrease".to_string(),
+                            WEnchantType::RadiusIncrease => "RadiusIncrease".to_string(),
+                        },
+                        value: e.value,
+                    })
+                    .collect();
+
+                crate::model::gamesave::WeaponData {
+                    weapon_type: format!("{:?}", w.weapon_type),
+                    damage: w.damage,
+                    cooldown: w.cooldown,
+                    name: w.name.clone(),
+                    rarity: format!("{:?}", w.rarity),
+                    enchants,
+                }
+            })
+            .collect();
+
+        let consumables = self
+            .character
+            .consumable_inventory
+            .items
+            .iter()
+            .map(|c| crate::model::gamesave::ConsumableData {
+                consumable_type: format!("{:?}", c.consumable_type),
+                quantity: c.quantity,
+                name: c.name.clone(),
+                description: c.description.clone(),
+            })
+            .collect();
+
+        let inventory_data = crate::model::gamesave::InventoryData {
+            weapons,
+            current_weapon_index: self.character.weapon_inventory.current_weapon_index,
+            consumables,
+        };
+
+        let skill_tree_data = crate::model::gamesave::SkillTreeData {
+            path_nodes: Vec::new(),
+            chosen_path: None,
+        };
+
+        let ultimate_shop_data = crate::model::gamesave::UltimateShopData {
+            owned_ultimates: Vec::new(),
+            stat_upgrades: Vec::new(),
+            current_ultimate_type: "Shockwave".to_string(),
+        };
+
+        GameSave {
+            player_name: self.character.name.clone(),
+            player_stats,
+            inventory_data,
+            skill_tree_data,
+            ultimate_shop_data,
+            floor_level: self.floor_level,
+            max_levels: self.max_levels,
+            position_x: self.character_position.0,
+            position_y: self.character_position.1,
+            difficulty: format!("{:?}", self.settings.difficulty),
+            time_elapsed: self
+                .game_started_at
+                .map_or(0.0, |t| t.elapsed().as_secs_f32()),
+        }
     }
 
     pub fn should_tick(&self) -> bool {
@@ -687,10 +843,18 @@ impl App {
             arrow.update(frame_time);
         }
 
+        // Check arrow-enemy collisions FIRST before wall/walkable checks
+        // This ensures arrows can hit enemies even if they occupy non-walkable positions
+        self.check_arrow_collisions();
+
         let mut indices_to_stop = Vec::new();
         for (idx, arrow) in self.arrows.iter().enumerate() {
+            if arrow.is_dead {
+                continue; // Skip arrows already stopped by collision
+            }
             let pos = arrow.get_position();
-            if !self.is_walkable(pos.0, pos.1) {
+            // Only check walls, not enemy positions (already handled above)
+            if !self.is_walkable_for_arrow(pos.0, pos.1) {
                 indices_to_stop.push(idx);
             }
         }
@@ -702,6 +866,62 @@ impl App {
         }
 
         self.arrows.retain(|arrow| arrow.is_alive());
+    }
+
+    pub fn check_arrow_collisions(&mut self) {
+        if let Some(floor) = &mut self.current_floor {
+            let mut arrows_to_remove = Vec::new();
+            let mut enemies_to_damage = Vec::new();
+
+            for (arrow_idx, arrow) in self.arrows.iter().enumerate() {
+                let arrow_pos = arrow.get_position();
+
+                for (enemy_idx, enemy) in floor.enemies.iter().enumerate() {
+                    if enemy.is_alive() {
+                        let enemy_pos = (enemy.position.x, enemy.position.y);
+
+                        // Check if arrow collides with enemy
+                        if arrow_pos == enemy_pos {
+                            let weapon_damage = self
+                                .character
+                                .weapon_inventory
+                                .get_current_weapon()
+                                .map(|w| w.damage)
+                                .unwrap_or(5);
+
+                            arrows_to_remove.push(arrow_idx);
+                            enemies_to_damage.push((enemy_idx, weapon_damage));
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // Apply damage to enemies in reverse order to maintain correct indices
+            for (enemy_idx, damage) in enemies_to_damage.iter().rev() {
+                if *enemy_idx < floor.enemies.len() {
+                    let enemy = &mut floor.enemies[*enemy_idx];
+                    enemy.take_damage(*damage);
+
+                    // Create damage impact animation (particle burst)
+                    self.particle_system
+                        .emit_crit(enemy.position.x as f32, enemy.position.y as f32);
+
+                    // Play hit sound
+                    self.audio_manager.play_sound_effect(SoundEffect::Hit);
+
+                    // Charge ultimate based on damage dealt
+                    self.character.charge_ultimate(*damage);
+                }
+            }
+
+            // Remove hit arrows
+            for arrow_idx in arrows_to_remove.iter().rev() {
+                if *arrow_idx < self.arrows.len() {
+                    self.arrows[*arrow_idx].stop();
+                }
+            }
+        }
     }
 
     pub fn use_ultimate(&mut self) {
@@ -729,6 +949,16 @@ impl App {
     }
 
     pub fn switch_weapon(&mut self, slot: usize) {
+        // Check if slot is valid and has a weapon
+        if slot < 1 || slot > self.character.weapon_inventory.weapons.len() {
+            // No weapon in this slot - show warning and play error sound
+            self.empty_slot_message_timer = 2.0; // Show message for 2 seconds
+            self.audio_manager.play_sound_effect(SoundEffect::MenuClick);
+            return;
+        }
+
+        // Kill any currently playing switch sound and play new one
+        self.audio_manager.stop_sound_effects();
         self.character.weapon_inventory.switch_weapon(slot - 1);
         self.audio_manager.play_sound_effect(SoundEffect::ItemEquip);
     }
@@ -934,12 +1164,26 @@ impl App {
     pub fn update_game_logic(&mut self) {
         let delta = (self.game_tick_rate_ms as f32) / 1000.0;
 
+        // Auto-save every 30 seconds during gameplay
+        if self.state == AppState::Game {
+            self.auto_save_timer += delta;
+            if self.auto_save_timer >= 30.0 {
+                self.auto_save();
+                self.auto_save_timer = 0.0;
+            }
+        }
+
         // Update weapon pickup notification timer
         if self.weapon_pickup_timer > 0.0 {
             self.weapon_pickup_timer -= delta;
             if self.weapon_pickup_timer <= 0.0 {
                 self.last_weapon_pickup = None;
             }
+        }
+
+        // Update empty slot warning message timer
+        if self.empty_slot_message_timer > 0.0 {
+            self.empty_slot_message_timer -= delta;
         }
 
         self.character.status_effects.update(delta);
@@ -1190,28 +1434,31 @@ impl App {
                         (0.0, 1.0)
                     };
 
-                    // Generate attack animation for enemy
-                    let attack_pattern = match enemy.rarity {
-                        crate::model::enemy_type::EnemyRarity::Fighter => {
-                            crate::model::attack_pattern::AttackPattern::BasicSlash
-                        }
-                        crate::model::enemy_type::EnemyRarity::Guard => {
-                            crate::model::attack_pattern::AttackPattern::BasicSlash
-                        }
-                        crate::model::enemy_type::EnemyRarity::Champion => {
-                            crate::model::attack_pattern::AttackPattern::WhirlwindAttack
-                        }
-                        crate::model::enemy_type::EnemyRarity::Elite => {
-                            crate::model::attack_pattern::AttackPattern::GroundSlam(1)
-                        }
-                        crate::model::enemy_type::EnemyRarity::Boss => {
-                            match enemy.attack_pattern_cycle {
-                                0 => crate::model::attack_pattern::AttackPattern::Fireball(3),
-                                1 => crate::model::attack_pattern::AttackPattern::GroundSlam(2),
-                                2 => crate::model::attack_pattern::AttackPattern::WhirlwindAttack,
-                                _ => crate::model::attack_pattern::AttackPattern::BasicSlash,
+                    // Get attack from the enemy's actual attack patterns
+                    let (attack_pattern, attack_damage) = if !enemy.attacks.is_empty() {
+                        let current_attack = &enemy.attacks[enemy.current_attack_index];
+                        let damage = current_attack.damage();
+                        (current_attack.pattern.clone(), damage)
+                    } else {
+                        // Fallback to rarity-based pattern if no attacks defined
+                        let pattern = match enemy.rarity {
+                            crate::model::enemy_type::EnemyRarity::Fighter => {
+                                crate::model::attack_pattern::AttackPattern::BasicSlash
                             }
-                        }
+                            crate::model::enemy_type::EnemyRarity::Guard => {
+                                crate::model::attack_pattern::AttackPattern::BasicSlash
+                            }
+                            crate::model::enemy_type::EnemyRarity::Champion => {
+                                crate::model::attack_pattern::AttackPattern::WhirlwindAttack
+                            }
+                            crate::model::enemy_type::EnemyRarity::Elite => {
+                                crate::model::attack_pattern::AttackPattern::GroundSlam(1)
+                            }
+                            crate::model::enemy_type::EnemyRarity::Boss => {
+                                crate::model::attack_pattern::AttackPattern::BasicSlash
+                            }
+                        };
+                        (pattern, rarity_damage)
                     };
 
                     let attack_dir_x = (dx.signum()) as i32;
@@ -1229,11 +1476,12 @@ impl App {
                             .push(ActiveAnimation::new_with_category(frames, category));
                     }
 
-                    attacks_on_player.push((rarity_damage, dx, dy));
+                    attacks_on_player.push((attack_damage, dx, dy));
 
-                    // Cycle attack pattern for bosses
-                    if matches!(enemy.rarity, crate::model::enemy_type::EnemyRarity::Boss) {
-                        enemy.attack_pattern_cycle = (enemy.attack_pattern_cycle + 1) % 3;
+                    // Cycle attack pattern to the next one
+                    if !enemy.attacks.is_empty() {
+                        enemy.current_attack_index =
+                            (enemy.current_attack_index + 1) % enemy.attacks.len();
                     }
                 }
 
@@ -1437,15 +1685,93 @@ impl App {
         }
     }
 
-    #[allow(dead_code)]
     pub fn save_game(&self) -> std::io::Result<()> {
-        use crate::model::gamesave::{GameSave, InventoryData};
+        use crate::model::gamesave::{
+            ConsumableData, EnchantData, GameSave, InventoryData, PathNodeData, PlayerStats,
+            SkillTreeData, UltimateShopData, WeaponData,
+        };
 
         let time = if let Some(started) = self.game_started_at {
             started.elapsed().as_secs_f32()
         } else {
             0.0
         };
+
+        // Serialize weapons
+        let weapons = self
+            .character
+            .weapon_inventory
+            .weapons
+            .iter()
+            .map(|w| WeaponData {
+                weapon_type: format!("{:?}", w.weapon_type),
+                damage: w.damage,
+                cooldown: w.cooldown,
+                name: w.name.clone(),
+                rarity: format!("{:?}", w.rarity),
+                enchants: w
+                    .enchants
+                    .iter()
+                    .map(|e| EnchantData {
+                        enchant_type: format!("{:?}", e.enchant_type),
+                        value: e.value,
+                    })
+                    .collect(),
+            })
+            .collect();
+
+        // Serialize consumables
+        let consumables = self
+            .character
+            .consumable_inventory
+            .items
+            .iter()
+            .map(|c| ConsumableData {
+                consumable_type: format!("{:?}", c.consumable_type),
+                quantity: c.quantity,
+                name: c.name.clone(),
+                description: c.description.clone(),
+            })
+            .collect();
+
+        // Serialize skill tree
+        let path_nodes = self
+            .character
+            .skill_tree_path
+            .paths
+            .iter()
+            .map(|node| PathNodeData {
+                path_type: format!("{:?}", node.path_type),
+                level: node.level,
+                total_cost: node.total_cost,
+                health_multiplier: node.stat_bonus.health_multiplier,
+                damage_multiplier: node.stat_bonus.damage_multiplier,
+                speed_multiplier: node.stat_bonus.speed_multiplier,
+            })
+            .collect();
+
+        let chosen_path = self
+            .character
+            .skill_tree_path
+            .chosen_path
+            .as_ref()
+            .map(|p| format!("{:?}", p));
+
+        // Serialize ultimate shop data
+        let owned_ultimates = self
+            .character
+            .shop_inventory
+            .owned_ultimates
+            .iter()
+            .map(|u| format!("{:?}", u))
+            .collect();
+        let stat_upgrades = self
+            .character
+            .shop_inventory
+            .stat_upgrades
+            .iter()
+            .map(|(k, v)| (format!("{:?}", k), *v))
+            .collect();
 
         let save = GameSave {
             player_name: self.char_name.clone(),
@@ -1458,10 +1784,22 @@ impl App {
                 max_health: self.character.health_max,
                 gold: self.character.gold,
                 enemies_killed: self.character.enemies_killed,
+                speed: self.character.speed,
+                ultimate_charge: self.character.ultimate_charge,
             },
             inventory_data: InventoryData {
-                weapon_slots: vec![None; 9], // Simplified for now
-                consumables: vec![],
+                weapons,
+                current_weapon_index: self.character.weapon_inventory.current_weapon_index,
+                consumables,
+            },
+            skill_tree_data: SkillTreeData {
+                path_nodes,
+                chosen_path,
+            },
+            ultimate_shop_data: UltimateShopData {
+                owned_ultimates,
+                stat_upgrades,
+                current_ultimate_type: format!("{:?}", self.character.ultimate.current_type),
             },
             floor_level: self.floor_level,
             max_levels: self.max_levels,
@@ -1474,12 +1812,21 @@ impl App {
     }
 
     pub fn load_game(&mut self, player_name: &str) -> std::io::Result<()> {
+        use crate::model::consumable::Consumable;
         use crate::model::gamesave::GameSave;
+        use crate::model::item_tier::ItemTier;
+        use crate::model::skill_tree_path::{PathType, SkillPathNode, SkillTreeManager, StatBonus};
+        use crate::model::ultimate::UltimateType;
+        use crate::model::ultimate_shop::StatUpgradeType;
+        use crate::model::weapon::{Enchant, EnchantType, Weapon, WeaponType};
 
         let save = GameSave::load(player_name)?;
 
-        // Restore character stats
+        // Restore character name
+        self.character.name = save.player_name.clone();
         self.char_name = save.player_name.clone();
+
+        // Restore character stats
         self.character.attack_damage = save.player_stats.attack_damage;
         self.character.attack_length = save.player_stats.attack_length;
         self.character.attack_width = save.player_stats.attack_width;
@@ -1488,11 +1835,181 @@ impl App {
         self.character.health_max = save.player_stats.max_health;
         self.character.gold = save.player_stats.gold;
         self.character.enemies_killed = save.player_stats.enemies_killed;
+        self.character.speed = save.player_stats.speed;
+        self.character.ultimate_charge = save.player_stats.ultimate_charge;
+
+        // Restore weapons
+        let mut weapons = Vec::new();
+        for weapon_data in &save.inventory_data.weapons {
+            // Parse weapon type from stored string
+            let weapon_type = match weapon_data.weapon_type.as_str() {
+                "Sword" => WeaponType::Sword,
+                "Bow" => WeaponType::Bow,
+                "Mace" => WeaponType::Mace,
+                "Spear" => WeaponType::Spear,
+                "Axe" => WeaponType::Axe,
+                "Staff" => WeaponType::Staff,
+                _ => WeaponType::Sword,
+            };
+
+            // Parse rarity
+            let rarity = match weapon_data.rarity.as_str() {
+                "Common" => ItemTier::Common,
+                "Rare" => ItemTier::Rare,
+                "Epic" => ItemTier::Epic,
+                "Legendary" => ItemTier::Legendary,
+                _ => ItemTier::Common,
+            };
+
+            // Parse enchants
+            let enchants = weapon_data
+                .enchants
+                .iter()
+                .map(|e| {
+                    let enchant_type = match e.enchant_type.as_str() {
+                        "DamageIncrease" => EnchantType::DamageIncrease,
+                        "RadiusIncrease" => EnchantType::RadiusIncrease,
+                        _ => EnchantType::DamageIncrease,
+                    };
+                    Enchant {
+                        enchant_type,
+                        value: e.value,
+                    }
+                })
+                .collect();
+
+            // Create weapon with parsed data
+            let weapon = Weapon {
+                weapon_type,
+                damage: weapon_data.damage,
+                cooldown: weapon_data.cooldown,
+                name: weapon_data.name.clone(),
+                enchants,
+                rarity,
+                attack_pattern: crate::model::attack_pattern::AttackPattern::BasicSlash,
+            };
+            weapons.push(weapon);
+        }
+
+        // If no weapons were loaded, add default weapons
+        if weapons.is_empty() {
+            weapons.push(Weapon::new_sword());
+            weapons.push(Weapon::new_bow());
+        }
+
+        self.character.weapon_inventory.weapons = weapons;
+        self.character.weapon_inventory.current_weapon_index =
+            save.inventory_data.current_weapon_index;
+
+        // Restore consumables
+        for consumable_data in &save.inventory_data.consumables {
+            let consumable_type_str = consumable_data.consumable_type.trim_matches(|c| c == '"');
+            let consumable_type = match consumable_type_str {
+                "WeakHealingDraught" => {
+                    crate::model::consumable::ConsumableType::WeakHealingDraught
+                }
+                "BandageRoll" => crate::model::consumable::ConsumableType::BandageRoll,
+                "AntitoxinVial" => crate::model::consumable::ConsumableType::AntitoxinVial,
+                "FireOilFlask" => crate::model::consumable::ConsumableType::FireOilFlask,
+                "BlessedBread" => crate::model::consumable::ConsumableType::BlessedBread,
+                _ => crate::model::consumable::ConsumableType::WeakHealingDraught,
+            };
+            let mut consumable = Consumable::new(consumable_type);
+            consumable.quantity = consumable_data.quantity;
+            self.character.consumable_inventory.add(consumable);
+        }
+
+        // Restore skill tree
+        let mut path_nodes = Vec::new();
+        for node_data in &save.skill_tree_data.path_nodes {
+            let path_type = match node_data.path_type.as_str() {
+                "Warrior" => PathType::Warrior,
+                "Mage" => PathType::Mage,
+                "Rogue" => PathType::Rogue,
+                "Balanced" => PathType::Balanced,
+                _ => PathType::Balanced,
+            };
+
+            let stat_bonus = StatBonus {
+                health_multiplier: node_data.health_multiplier,
+                damage_multiplier: node_data.damage_multiplier,
+                speed_multiplier: node_data.speed_multiplier,
+            };
+
+            path_nodes.push(SkillPathNode {
+                path_type,
+                level: node_data.level,
+                total_cost: node_data.total_cost,
+                stat_bonus,
+            });
+        }
+
+        let chosen_path =
+            save.skill_tree_data
+                .chosen_path
+                .as_ref()
+                .and_then(|p| match p.as_str() {
+                    "Warrior" => Some(PathType::Warrior),
+                    "Mage" => Some(PathType::Mage),
+                    "Rogue" => Some(PathType::Rogue),
+                    "Balanced" => Some(PathType::Balanced),
+                    _ => None,
+                });
+
+        self.character.skill_tree_path = SkillTreeManager {
+            paths: path_nodes,
+            chosen_path,
+        };
+
+        // Restore ultimate shop inventory
+        let owned_ultimates = save
+            .ultimate_shop_data
+            .owned_ultimates
+            .iter()
+            .filter_map(|u| match u.as_str() {
+                "Rage" => Some(UltimateType::Rage),
+                "Shockwave" => Some(UltimateType::Shockwave),
+                "Ghost" => Some(UltimateType::Ghost),
+                _ => None,
+            })
+            .collect();
+
+        let stat_upgrades = save
+            .ultimate_shop_data
+            .stat_upgrades
+            .iter()
+            .filter_map(|(k, v)| {
+                let upgrade_type = match k.as_str() {
+                    "MaxHealth" => Some(StatUpgradeType::MaxHealth),
+                    "AttackDamage" => Some(StatUpgradeType::AttackDamage),
+                    "AttackSpeed" => Some(StatUpgradeType::AttackSpeed),
+                    "MovementSpeed" => Some(StatUpgradeType::MovementSpeed),
+                    "DashDistance" => Some(StatUpgradeType::DashDistance),
+                    _ => None,
+                };
+                upgrade_type.map(|ut| (ut, *v))
+            })
+            .collect();
+
+        self.character.shop_inventory.owned_ultimates = owned_ultimates;
+        self.character.shop_inventory.stat_upgrades = stat_upgrades;
+
+        // Restore current ultimate type
+        let current_ultimate_type = match save.ultimate_shop_data.current_ultimate_type.as_str() {
+            "Rage" => UltimateType::Rage,
+            "Shockwave" => UltimateType::Shockwave,
+            "Ghost" => UltimateType::Ghost,
+            _ => UltimateType::Shockwave,
+        };
+        self.character.ultimate.current_type = current_ultimate_type;
 
         // Restore game state
         self.floor_level = save.floor_level;
         self.max_levels = save.max_levels;
         self.character_position = (save.position_x, save.position_y);
+
+        // Restore difficulty
+        self.settings.difficulty = crate::model::item_tier::Difficulty::from_name(&save.difficulty);
 
         Ok(())
     }

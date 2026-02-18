@@ -240,7 +240,15 @@ pub fn render_ultimate_area(
 }
 
 pub fn render_weapon_info(f: &mut Frame, area: Rect, weapon_name: &str) {
-    let weapon_widget = Paragraph::new(format!("Equipped: {}", weapon_name))
+    // Truncate long weapon names to fit in the panel
+    let max_len = 18;
+    let truncated_name = if weapon_name.len() > max_len {
+        format!("{}...", &weapon_name[..max_len.saturating_sub(3)])
+    } else {
+        weapon_name.to_string()
+    };
+
+    let weapon_widget = Paragraph::new(format!("Equipped: {}", truncated_name))
         .alignment(Alignment::Left)
         .style(Style::default().fg(Color::Cyan));
 
@@ -611,4 +619,146 @@ pub fn render_animations(
             }
         }
     }
+}
+
+pub fn render_weapon_slots(
+    f: &mut Frame,
+    area: Rect,
+    weapon_inventory: &crate::model::weapon::WeaponInventory,
+) {
+    if area.width < 10 {
+        return; // Area too small to display weapon slots
+    }
+
+    let mut slots_display = String::new();
+
+    for i in 1..=9 {
+        if i > 1 {
+            slots_display.push(' ');
+        }
+
+        if i <= weapon_inventory.weapons.len() {
+            let is_current = i - 1 == weapon_inventory.current_weapon_index;
+            let weapon = &weapon_inventory.weapons[i - 1];
+            let glyph = weapon.weapon_type.get_glyph();
+            let slot_display = if is_current {
+                format!("[{}]", glyph) // Current weapon in brackets
+            } else {
+                format!(" {} ", glyph) // Other weapons without brackets
+            };
+            slots_display.push_str(&slot_display);
+        } else {
+            slots_display.push_str("[ ]"); // Empty slot
+        }
+    }
+
+    let weapon_slots = Paragraph::new(slots_display)
+        .alignment(Alignment::Center)
+        .style(Style::default().fg(Color::Cyan));
+
+    f.render_widget(weapon_slots, area);
+}
+
+pub fn render_weapon_names_tooltip(
+    f: &mut Frame,
+    area: Rect,
+    weapon_inventory: &crate::model::weapon::WeaponInventory,
+) {
+    // Display only the current weapon name
+    if let Some(weapon) = weapon_inventory.get_current_weapon() {
+        let rarity_color = weapon.rarity.get_color();
+        let line = Line::from(Span::styled(
+            format!("[{}]", weapon.name),
+            Style::default()
+                .fg(rarity_color)
+                .add_modifier(Modifier::BOLD),
+        ));
+
+        let tooltip = Paragraph::new(line)
+            .alignment(Alignment::Center)
+            .style(Style::default().fg(Color::Cyan));
+        f.render_widget(tooltip, area);
+    }
+}
+
+pub fn render_weapon_names_panel(
+    f: &mut Frame,
+    area: Rect,
+    weapon_inventory: &crate::model::weapon::WeaponInventory,
+) {
+    let mut lines = Vec::new();
+
+    // Title
+    lines.push(Line::from(Span::styled(
+        "⚔ WEAPONS",
+        Style::default()
+            .fg(Color::Cyan)
+            .add_modifier(Modifier::BOLD),
+    )));
+    lines.push(Line::from("")); // Empty line for spacing
+
+    // List each weapon
+    for (i, weapon) in weapon_inventory.weapons.iter().enumerate() {
+        let slot_num = i + 1;
+        let is_current = i == weapon_inventory.current_weapon_index;
+        let style = if is_current {
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD)
+        } else {
+            Style::default().fg(Color::Gray)
+        };
+
+        let prefix = if is_current { "→ " } else { "  " };
+        let rarity_color = weapon.rarity.get_color();
+
+        let line_text = format!(
+            "{}[{}] {} ({})",
+            prefix,
+            slot_num,
+            weapon.name,
+            weapon.rarity.name()
+        );
+        lines.push(Line::from(Span::styled(line_text, style)));
+    }
+
+    // Show empty slots as "available"
+    for i in (weapon_inventory.weapons.len() + 1)..=9 {
+        lines.push(Line::from(Span::styled(
+            format!("  [{}] Empty", i),
+            Style::default()
+                .fg(Color::DarkGray)
+                .add_modifier(Modifier::DIM),
+        )));
+    }
+
+    let weapons_widget = Paragraph::new(lines)
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(Color::Cyan))
+                .title(" Weapons [1-9] ")
+                .title_alignment(Alignment::Left),
+        )
+        .alignment(Alignment::Left)
+        .style(Style::default().fg(Color::White));
+
+    f.render_widget(weapons_widget, area);
+}
+
+pub fn render_empty_slot_warning(f: &mut Frame, area: Rect, timer: f32) {
+    if timer <= 0.0 {
+        return; // Don't show if timer is expired
+    }
+
+    let message = "⚠ No weapon in that slot! [1-9]";
+    let flash = ((timer * 5.0).sin() + 1.0) / 2.0 > 0.5; // Flash effect
+
+    let color = if flash { Color::LightRed } else { Color::Red };
+
+    let paragraph = Paragraph::new(message)
+        .alignment(Alignment::Center)
+        .style(Style::default().fg(color).add_modifier(Modifier::BOLD));
+
+    f.render_widget(paragraph, area);
 }

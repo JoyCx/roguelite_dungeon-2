@@ -77,7 +77,8 @@ pub fn draw(f: &mut Frame, app: &mut App, area: Rect) {
     // Bottom control hints - only show if fade is complete
     if alpha_progress > 0.7 {
         let hints = vec![
-            ("R", "Restart", Some(Color::Green)),
+            ("R", "Retry Floor", Some(Color::Green)),
+            ("N", "New Game", Some(Color::Yellow)),
             ("ESC", "Main Menu", Some(Color::Red)),
         ];
 
@@ -90,7 +91,16 @@ pub fn handle_input(app: &mut App, key: crossterm::event::KeyCode) {
 
     match key {
         KeyCode::Char('r') | KeyCode::Char('R') => {
-            app.restart_game();
+            // Retry current floor with reset health and position
+            app.retry_current_floor();
+        }
+        KeyCode::Char('n') | KeyCode::Char('N') => {
+            // Start a completely new game
+            app.state = crate::app::AppState::CharacterCreation;
+            app.char_name = String::new();
+            app.char_name_input_mode = true;
+            app.char_creation_selection = 0;
+            app.settings.difficulty = app.settings.default_difficulty.clone();
         }
         KeyCode::Esc => {
             app.state = crate::app::AppState::MainMenu;
