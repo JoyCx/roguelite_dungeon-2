@@ -300,10 +300,6 @@ impl EnemyUltimate {
     }
 }
 
-// ============================================================================
-// FIGHTER ENEMIES
-// ============================================================================
-
 pub fn create_rotting_footsoldier() -> EnemyTemplate {
     EnemyTemplate {
         name: "Rotting Footsoldier".to_string(),
@@ -379,10 +375,6 @@ pub fn create_whispering_shade() -> EnemyTemplate {
     }
 }
 
-// ============================================================================
-// GUARD ENEMIES
-// ============================================================================
-
 pub fn create_crypt_sentinel() -> EnemyTemplate {
     EnemyTemplate {
         name: "Crypt Sentinel".to_string(),
@@ -457,10 +449,6 @@ pub fn create_wailing_doorwarden() -> EnemyTemplate {
         buffs: vec![],
     }
 }
-
-// ============================================================================
-// CHAMPION ENEMIES
-// ============================================================================
 
 pub fn create_blight_captain() -> EnemyTemplate {
     EnemyTemplate {
@@ -559,10 +547,6 @@ pub fn create_veilbound_duelist() -> EnemyTemplate {
         buffs: vec![EnemyBuff::Speed(20), EnemyBuff::PhaseShift],
     }
 }
-
-// ============================================================================
-// ELITE ENEMIES
-// ============================================================================
 
 pub fn create_corpse_abomination() -> EnemyTemplate {
     EnemyTemplate {
@@ -685,10 +669,6 @@ pub fn create_lantern_haunt() -> EnemyTemplate {
         buffs: vec![EnemyBuff::EchoAmplification, EnemyBuff::Speed(15)],
     }
 }
-
-// ============================================================================
-// BOSS ENEMIES
-// ============================================================================
 
 pub fn create_ossuary_king() -> EnemyTemplate {
     EnemyTemplate {

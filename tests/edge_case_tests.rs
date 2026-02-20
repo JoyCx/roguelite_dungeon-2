@@ -9,8 +9,6 @@ mod edge_case_tests {
     use roguelite_dungeon::model::skill::SkillType;
     use roguelite_dungeon::model::weapon::Weapon;
 
-    // ====== ZERO/MINIMAL HEALTH TESTS ======
-
     #[test]
     fn test_character_zero_health() {
         let mut character = Character::default();
@@ -24,7 +22,7 @@ mod edge_case_tests {
         let mut character = Character::default();
         character.health = 5;
         character.take_damage(10);
-        assert!(character.health >= 0); // Should clamp to 0
+        assert!(character.health >= 0);
     }
 
     #[test]
@@ -32,7 +30,7 @@ mod edge_case_tests {
         let mut character = Character::default();
         let max = character.health_max;
         character.heal(1000);
-        assert_eq!(character.health, max); // Should not exceed max
+        assert_eq!(character.health, max);
     }
 
     #[test]
@@ -51,14 +49,11 @@ mod edge_case_tests {
         assert!(boss.base_enemy.health == 0);
     }
 
-    // ====== MAXIMUM VALUE TESTS ======
-
     #[test]
     fn test_character_max_gold() {
         let mut character = Character::default();
         character.add_gold(i32::MAX as u32 / 2);
         character.add_gold(i32::MAX as u32 / 2);
-        // Should handle large gold values gracefully
         assert!(character.get_gold() > 0);
     }
 
@@ -66,7 +61,6 @@ mod edge_case_tests {
     fn test_damage_cap() {
         let mut character = Character::default();
         character.attack_damage = i32::MAX / 2;
-        // Simulate heavy attack
         let damage = character.attack_damage;
         assert!(damage > 0);
     }
@@ -76,24 +70,21 @@ mod edge_case_tests {
         let boss = BossEnemy::new(0, 0, BossType::CorruptedWarden);
         let damage = boss.get_effective_damage();
         assert!(damage > 0);
-        assert!(damage < i32::MAX); // Shouldn't overflow
+        assert!(damage < i32::MAX);
     }
-
-    // ====== COOLDOWN EDGE CASES ======
 
     #[test]
     fn test_skill_zero_cooldown() {
         let mut skill = Skill::new(SkillType::Slash);
         skill.base_cooldown = 0.0;
         skill.use_skill();
-        // Should be immediately ready with 0 cooldown
         assert!(skill.cooldown_progress() >= 0.0);
     }
 
     #[test]
     fn test_skill_extreme_cooldown() {
         let mut skill = Skill::new(SkillType::GroundSlam);
-        skill.base_cooldown = 1000.0; // Very long cooldown
+        skill.base_cooldown = 1000.0;
         skill.use_skill();
         let remaining = skill.remaining_cooldown();
         assert!(remaining > 900.0);
@@ -102,19 +93,17 @@ mod edge_case_tests {
     #[test]
     fn test_cooldown_progress_boundary() {
         let mut skill = Skill::new(SkillType::Pierce);
-        assert_eq!(skill.cooldown_progress(), 1.0); // Ready = 100%
+        assert_eq!(skill.cooldown_progress(), 1.0);
 
         skill.use_skill();
         let progress = skill.cooldown_progress();
         assert!(progress >= 0.0 && progress <= 1.0);
     }
 
-    // ====== DIVISION BY ZERO PREVENTION ======
-
     #[test]
     fn test_health_percentage_zero_max_health() {
         let mut character = Character::default();
-        character.health_max = 1; // Minimum to avoid division issues
+        character.health_max = 1;
         character.health = 0;
         let percentage = character.get_health_percentage();
         assert_eq!(percentage, 0.0);
@@ -124,7 +113,7 @@ mod edge_case_tests {
     fn test_damage_calculation_no_divide() {
         let character = Character::default();
         let base_damage = character.attack_damage;
-        assert!(base_damage > 0); // Should have default positive damage
+        assert!(base_damage > 0);
     }
 
     #[test]
@@ -132,11 +121,9 @@ mod edge_case_tests {
         let mut boss = BossEnemy::new(0, 0, BossType::FlameSorcerer);
         let max_health = boss.base_enemy.health;
 
-        // Test exactly at 33% boundary
         boss.base_enemy.health = (max_health as f32 * 0.33) as i32;
         boss.update_phase();
 
-        // Should transition properly
         assert!(boss.base_enemy.health > 0);
     }
 
@@ -145,21 +132,17 @@ mod edge_case_tests {
         let mut boss = BossEnemy::new(0, 0, BossType::ShadowAssassin);
         let max_health = boss.base_enemy.health;
 
-        // Test exactly at 66% boundary
         boss.base_enemy.health = (max_health as f32 * 0.66) as i32;
         boss.update_phase();
 
         assert!(boss.base_enemy.health > 0);
     }
 
-    // ====== FLOATING POINT PRECISION ======
-
     #[test]
     fn test_skill_damage_multiplier_precision() {
         let skill = Skill::new(SkillType::HeavyAttack);
         let multiplier = skill.get_damage_multiplier();
 
-        // Should be a reasonable value without NaN
         assert!(!multiplier.is_nan());
         assert!(!multiplier.is_infinite());
         assert!(multiplier > 0.0);
@@ -182,10 +165,6 @@ mod edge_case_tests {
 
         assert!(!boss.enrage_multiplier.is_nan());
         assert!(!boss.enrage_multiplier.is_infinite());
-    }
-
-    // ====== STRESS TESTS ======
-
     #[test]
     fn test_large_inventory_stacking() {
         use roguelite_dungeon::model::consumable::{Consumable, ConsumableType};
@@ -232,15 +211,12 @@ mod edge_case_tests {
             let mut boss = BossEnemy::new(0, 0, boss_type);
             let max_health = boss.base_enemy.health;
 
-            // Phase 1
             assert!(boss.base_enemy.health == max_health);
 
-            // Phase 2
             boss.base_enemy.health = (max_health as f32 * 0.5) as i32;
             boss.update_phase();
             assert!(boss.enrage_multiplier >= 1.0);
 
-            // Phase 3
             boss.base_enemy.health = (max_health as f32 * 0.2) as i32;
             boss.update_phase();
             assert!(boss.enrage_multiplier > 1.0);
@@ -251,14 +227,12 @@ mod edge_case_tests {
     fn test_rapid_skill_usage() {
         let mut skill = Skill::new(SkillType::Slash);
 
-        // Try to use skill many times rapidly
         for _ in 0..1000 {
             if skill.is_ready() {
                 skill.use_skill();
             }
         }
 
-        // Should still be in valid state
         assert!(!skill.cooldown_progress().is_nan());
     }
 
@@ -267,7 +241,6 @@ mod edge_case_tests {
         let mut character = Character::default();
         let max_health = character.health;
 
-        // Take small amounts of damage repeatedly
         for _ in 0..10 {
             character.take_damage(5);
         }
@@ -281,14 +254,12 @@ mod edge_case_tests {
         let mut boss = BossEnemy::new(0, 0, BossType::GoblinOverlord);
         let original_state = boss.base_enemy.speed;
 
-        // Try to trigger special ability many times
         for _ in 0..10 {
             if boss.can_use_special_ability(std::time::Instant::now()) {
                 boss.trigger_special_ability();
             }
         }
 
-        // Boss should still function
         assert!(boss.base_enemy.health > 0);
     }
 
@@ -297,7 +268,6 @@ mod edge_case_tests {
         let mut character = Character::default();
         character.attack_damage = 0;
 
-        // Should handle zero damage gracefully
         assert_eq!(character.attack_damage, 0);
     }
 
@@ -311,7 +281,6 @@ mod edge_case_tests {
         character.take_damage(20);
         assert!(character.health >= 0);
 
-        // Heal back up
         character.heal(5);
         assert!(character.health <= character.health_max);
     }
@@ -324,7 +293,6 @@ mod edge_case_tests {
         let ready1 = skill1.is_ready();
         let ready2 = skill2.is_ready();
 
-        // Both should be ready initially
         assert!(ready1);
         assert!(ready2);
     }

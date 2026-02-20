@@ -1,6 +1,6 @@
 use crate::constants::GAME_TICK_RATE_MS;
 use crate::model::arrow::Arrow;
-use crate::model::attack_pattern::AnimationFrame; //
+use crate::model::attack_pattern::AnimationFrame;
 use crate::model::audio::{AudioManager, SoundEffect};
 use crate::model::character::Character;
 use crate::model::floor::Floor;

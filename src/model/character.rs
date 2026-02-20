@@ -75,7 +75,7 @@ pub struct Character {
     pub damaged_at: Option<Instant>,    // timestamp of when entity was last damaged
 }
 
-        impl Default for Character {
+impl Default for Character {
     fn default() -> Self {
         Self {
             speed: PLAYER_BASE_SPEED,
@@ -576,7 +576,6 @@ mod tests {
         assert_eq!(character.health, initial_health - 20);
 
         character.apply_consumable(&ConsumableType::WeakHealingDraught);
-        // Should add healing effect but not immediately heal
         assert!(character
             .status_effects
             .has_effect(&StatusEffectType::Healing));
@@ -596,7 +595,6 @@ mod tests {
 
         character.apply_consumable(&ConsumableType::BandageRoll);
 
-        // Should remove bleed and heal
         assert!(!character
             .status_effects
             .has_effect(&StatusEffectType::Bleed));
@@ -606,7 +604,6 @@ mod tests {
     #[test]
     fn test_total_attack_damage() {
         let character = Character::default();
-        // Should be base attack damage (no enchants by default)
         assert_eq!(character.get_total_attack_damage(), PLAYER_BASE_DAMAGE);
     }
 
@@ -668,7 +665,6 @@ mod tests {
         // Use skill
         assert!(character.use_skill(SkillType::Slash));
 
-        // Should not be ready immediately after
         assert!(!character.is_skill_ready(SkillType::Slash));
     }
 

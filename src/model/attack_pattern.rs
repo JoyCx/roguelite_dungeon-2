@@ -13,7 +13,6 @@ pub struct AnimationFrame {
 /// 12+ unique patterns covering melee, ranged, and magical attacks
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub enum AttackPattern {
-    // === CLOSE COMBAT PATTERNS ===
     /// Classic melee slash - 3x3 centered around attacker
     BasicSlash,
 
@@ -26,7 +25,6 @@ pub enum AttackPattern {
     /// Forward thrust - pierces through multiple enemies in a line
     SwordThrust(i32), // reach: distance of the thrust
 
-    // === RANGED PATTERNS ===
     /// Single projectile - straight line attack
     ArrowShot(i32), // reach: distance the arrow travels
 
@@ -39,7 +37,6 @@ pub enum AttackPattern {
     /// Piercing shot - goes through walls/obstacles further
     PiercingShot(i32), // reach: distance, ignores obstacles
 
-    // === MAGICAL PATTERNS ===
     /// Fireball - circular explosion with expanding rings
     Fireball(i32), // radius: explosion radius
 
@@ -52,7 +49,6 @@ pub enum AttackPattern {
     /// Meteor shower - falls from above in forward direction area
     MeteorShower(i32, i32), // (reach, width): distance and impact area width
 
-    // === UNIQUE PATTERNS ===
     /// Crescent moon slash - curved attack pattern
     CrescentSlash,
 
@@ -127,8 +123,6 @@ impl AttackPattern {
             vec![]
         }
     }
-
-    // === CLOSE COMBAT ANIMATIONS ===
 
     fn basic_slash_animation(
         &self,
@@ -326,8 +320,6 @@ impl AttackPattern {
         frames
     }
 
-    // === RANGED ANIMATIONS ===
-
     fn arrow_shot_animation(
         &self,
         origin_x: i32,
@@ -471,8 +463,6 @@ impl AttackPattern {
 
         frames
     }
-
-    // === MAGICAL ANIMATIONS ===
 
     fn fireball_animation(
         &self,

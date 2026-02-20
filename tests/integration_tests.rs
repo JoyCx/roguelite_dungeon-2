@@ -299,21 +299,16 @@ mod integration_tests {
         assert!(whirlwind.get_aoe_radius() > pierce.get_aoe_radius());
     }
 
-    // ====== PHASE 5: INTEGRATION TESTS ======
-
     #[test]
     fn test_character_skill_integration() {
         use roguelite_dungeon::model::skill::SkillType;
 
         let mut character = Character::default();
 
-        // Character should have all 5 skills
         assert_eq!(character.get_ready_skills().len(), 5);
 
-        // Use a skill
         assert!(character.use_skill(SkillType::Slash));
 
-        // Should not be immediately ready
         assert!(!character.is_skill_ready(SkillType::Slash));
     }
 
@@ -323,11 +318,9 @@ mod integration_tests {
 
         let character = Character::default();
 
-        // Get skill multiplier
         let slash_multiplier = character.get_skill_damage_multiplier(SkillType::Slash);
         let pierce_multiplier = character.get_skill_damage_multiplier(SkillType::Pierce);
 
-        // Pierce should do more damage than slash
         assert!(pierce_multiplier > slash_multiplier);
     }
 
@@ -338,11 +331,9 @@ mod integration_tests {
         let mut character = Character::default();
         let initial_damage = character.get_skill_damage_multiplier(SkillType::HeavyAttack);
 
-        // Level up the skill
         character.level_up_skill(SkillType::HeavyAttack);
         let upgraded_damage = character.get_skill_damage_multiplier(SkillType::HeavyAttack);
 
-        // Should deal more damage after leveling up
         assert!(upgraded_damage > initial_damage);
     }
 
@@ -352,14 +343,11 @@ mod integration_tests {
 
         let mut floor = Floor::new(100, 40, 42);
 
-        // Should have no bosses initially
         let boss_count_before = floor.enemies.len();
 
-        // Spawn a boss
         let boss = floor.spawn_boss(BossType::SkeletalKnight);
         assert!(boss.is_some());
 
-        // Should have added boss to enemies
         assert!(floor.enemies.len() > boss_count_before);
     }
 
@@ -395,7 +383,6 @@ mod integration_tests {
         let boss = floor.spawn_boss(BossType::ShadowAssassin);
 
         if let Some(boss_ref) = boss {
-            // Boss should be placed in a valid location
             assert!(floor.is_walkable(
                 boss_ref.base_enemy.position.x,
                 boss_ref.base_enemy.position.y
@@ -410,11 +397,9 @@ mod integration_tests {
         let character = Character::default();
         let mut boss = BossEnemy::new(50, 50, BossType::GoblinOverlord);
 
-        // Initial state
         let _initial_player_health = character.health;
         let initial_boss_health = boss.base_enemy.health;
 
-        // Boss attacks player
         boss.base_enemy.health -= 10;
         assert!(boss.base_enemy.health < initial_boss_health);
     }
@@ -426,7 +411,6 @@ mod integration_tests {
         let character = Character::default();
         let mut skill_count = 0;
 
-        // Count how many skills are ready
         for skill_type in vec![
             SkillType::Slash,
             SkillType::Pierce,
@@ -439,7 +423,6 @@ mod integration_tests {
             }
         }
 
-        // All 5 skills should be ready initially
         assert_eq!(skill_count, 5);
     }
 
@@ -468,16 +451,13 @@ mod integration_tests {
 
         let mut character = Character::default();
 
-        // Level up multiple skills
         character.level_up_skill(SkillType::Slash);
         character.level_up_skill(SkillType::Pierce);
         character.level_up_skill(SkillType::Whirlwind);
 
-        // Use a skill
         character.use_skill(SkillType::Slash);
 
-        // Skills should persist state
         assert!(!character.is_skill_ready(SkillType::Slash));
-        assert!(character.is_skill_ready(SkillType::Pierce)); // Should still be ready
+        assert!(character.is_skill_ready(SkillType::Pierce));
     }
 }

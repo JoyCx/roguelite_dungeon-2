@@ -50,7 +50,6 @@ pub struct Weapon {
 }
 
 impl Weapon {
-    // === COMMON WEAPONS (ItemTier::Common) ===
     pub fn new_sword() -> Self {
         Self {
             weapon_type: WeaponType::Sword,
@@ -87,7 +86,6 @@ impl Weapon {
         }
     }
 
-    // === RARE WEAPONS ===
     pub fn steel_sword() -> Self {
         Self {
             weapon_type: WeaponType::Sword,
@@ -160,7 +158,6 @@ impl Weapon {
         }
     }
 
-    // === EPIC WEAPONS ===
     pub fn mithril_sword() -> Self {
         Self {
             weapon_type: WeaponType::Sword,
@@ -245,7 +242,6 @@ impl Weapon {
         }
     }
 
-    // === EXOTIC WEAPONS ===
     pub fn adamant_sword() -> Self {
         Self {
             weapon_type: WeaponType::Sword,
@@ -330,7 +326,6 @@ impl Weapon {
         }
     }
 
-    // === LEGENDARY WEAPONS ===
     pub fn excalibur() -> Self {
         Self {
             weapon_type: WeaponType::Sword,
@@ -403,7 +398,6 @@ impl Weapon {
         }
     }
 
-    // === MYTHIC WEAPONS ===
     pub fn primordial_blade() -> Self {
         Self {
             weapon_type: WeaponType::Sword,
@@ -476,7 +470,6 @@ impl Weapon {
         }
     }
 
-    // === GODLY WEAPONS ===
     pub fn godly_greatsword() -> Self {
         Self {
             weapon_type: WeaponType::Sword,
@@ -616,7 +609,6 @@ impl Weapon {
     /// Create a weapon of specified type and rarity
     pub fn for_type_and_rarity(weapon_type: &WeaponType, rarity: &ItemTier) -> Self {
         match (weapon_type, rarity) {
-            // COMMON
             (WeaponType::Sword, ItemTier::Common) => Self::new_sword(),
             (WeaponType::Bow, ItemTier::Common) => Self::new_bow(),
             (WeaponType::Mace, ItemTier::Common) => Self::new_mace(),
@@ -624,7 +616,6 @@ impl Weapon {
             (WeaponType::Axe, ItemTier::Common) => Self::new_bow(),     // Fallback
             (WeaponType::Staff, ItemTier::Common) => Self::new_mace(),  // Fallback
 
-            // RARE
             (WeaponType::Sword, ItemTier::Rare) => Self::steel_sword(),
             (WeaponType::Bow, ItemTier::Rare) => Self::composite_bow(),
             (WeaponType::Mace, ItemTier::Rare) => Self::steel_mace(),
@@ -632,7 +623,6 @@ impl Weapon {
             (WeaponType::Axe, ItemTier::Rare) => Self::battle_axe(),
             (WeaponType::Staff, ItemTier::Rare) => Self::quarterstaff(),
 
-            // EPIC
             (WeaponType::Sword, ItemTier::Epic) => Self::mithril_sword(),
             (WeaponType::Bow, ItemTier::Epic) => Self::longbow(),
             (WeaponType::Mace, ItemTier::Epic) => Self::warhammer(),
@@ -640,7 +630,6 @@ impl Weapon {
             (WeaponType::Axe, ItemTier::Epic) => Self::broad_axe(),
             (WeaponType::Staff, ItemTier::Epic) => Self::frost_staff(),
 
-            // EXOTIC
             (WeaponType::Sword, ItemTier::Exotic) => Self::adamant_sword(),
             (WeaponType::Bow, ItemTier::Exotic) => Self::platinum_bow(),
             (WeaponType::Mace, ItemTier::Exotic) => Self::molten_hammer(),
@@ -648,7 +637,6 @@ impl Weapon {
             (WeaponType::Axe, ItemTier::Exotic) => Self::storm_axe(),
             (WeaponType::Staff, ItemTier::Exotic) => Self::arcane_staff(),
 
-            // LEGENDARY
             (WeaponType::Sword, ItemTier::Legendary) => Self::excalibur(),
             (WeaponType::Bow, ItemTier::Legendary) => Self::divine_bow(),
             (WeaponType::Mace, ItemTier::Legendary) => Self::mjolnir(),
@@ -656,7 +644,6 @@ impl Weapon {
             (WeaponType::Axe, ItemTier::Legendary) => Self::world_splitter(),
             (WeaponType::Staff, ItemTier::Legendary) => Self::infinity_staff(),
 
-            // MYTHIC
             (WeaponType::Sword, ItemTier::Mythic) => Self::primordial_blade(),
             (WeaponType::Bow, ItemTier::Mythic) => Self::celestial_bow(),
             (WeaponType::Mace, ItemTier::Mythic) => Self::titan_hammer(),
@@ -664,7 +651,6 @@ impl Weapon {
             (WeaponType::Axe, ItemTier::Mythic) => Self::chaos_axe(),
             (WeaponType::Staff, ItemTier::Mythic) => Self::cosmic_staff(),
 
-            // GODLY
             (WeaponType::Sword, ItemTier::Godly) => Self::godly_greatsword(),
             (WeaponType::Bow, ItemTier::Godly) => Self::heavens_bow(),
             (WeaponType::Mace, ItemTier::Godly) => Self::omnipotent_hammer(),
