@@ -1,16 +1,16 @@
 {
-  "player_name": "waewaea",
+  "player_name": "weaewaeaeawea",
   "player_stats": {
     "attack_damage": 10,
     "attack_length": 2,
     "attack_width": 1,
     "dash_distance": 5,
-    "health": 0,
+    "health": 100,
     "max_health": 100,
-    "gold": 50,
-    "enemies_killed": 4,
+    "gold": 0,
+    "enemies_killed": 0,
     "speed": 5.0,
-    "ultimate_charge": 16.75
+    "ultimate_charge": 0.0
   },
   "inventory_data": {
     "weapons": [
@@ -29,17 +29,9 @@
         "name": "Wood Bow",
         "rarity": "Common",
         "enchants": []
-      },
-      {
-        "weapon_type": "Staff",
-        "damage": 12,
-        "cooldown": 0.3,
-        "name": "Frost Staff",
-        "rarity": "Epic",
-        "enchants": []
       }
     ],
-    "current_weapon_index": 2,
+    "current_weapon_index": 0,
     "consumables": []
   },
   "skill_tree_data": {
@@ -53,8 +45,8 @@
   },
   "floor_level": 1,
   "max_levels": 5,
-  "position_x": 119,
-  "position_y": 14,
-  "difficulty": "Normal",
-  "time_elapsed": 0.0
+  "position_x": 122,
+  "position_y": 9,
+  "difficulty": "Easy",
+  "time_elapsed": 340.9301
 }

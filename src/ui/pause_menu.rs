@@ -114,9 +114,12 @@ fn draw_volume_menu(f: &mut Frame, app: &mut App, area: Rect) {
     music_line_spans.push(Span::styled("Music Volume", music_style));
 
     // Calculate padding to align right
-    let content_width = 23 + music_percent.len();
+    let label_len = 12; // Length of "Music Volume"
+    let bar_len = 22; // Length of "[████████████████████]"
+    let space_len = 1; // The space before the percent
+    let content_width = label_len + bar_len + space_len + music_percent.len();
     let padding = (area.width as usize)
-        .saturating_sub(10)
+        .saturating_sub(2)
         .saturating_sub(content_width);
     if padding > 0 {
         music_line_spans.push(Span::raw(" ".repeat(padding)));
@@ -159,9 +162,12 @@ fn draw_volume_menu(f: &mut Frame, app: &mut App, area: Rect) {
     let mut sound_line_spans = vec![];
     sound_line_spans.push(Span::styled("Sound Volume", sound_style));
 
-    let content_width = 23 + sound_percent.len();
+    let label_len = 12; // Length of "Sound Volume"
+    let bar_len = 22; // Length of "[████████████████████]"
+    let space_len = 1; // The space before the percent
+    let content_width = label_len + bar_len + space_len + sound_percent.len();
     let padding = (area.width as usize)
-        .saturating_sub(10)
+        .saturating_sub(2)
         .saturating_sub(content_width);
     if padding > 0 {
         sound_line_spans.push(Span::raw(" ".repeat(padding)));
@@ -175,7 +181,7 @@ fn draw_volume_menu(f: &mut Frame, app: &mut App, area: Rect) {
         Block::default()
             .borders(Borders::ALL)
             .border_type(BorderType::Rounded)
-            .style(Style::default().bg(Color::Red))
+            .style(Style::default().bg(Color::Blue))
     } else {
         Block::default()
             .borders(Borders::ALL)
@@ -251,22 +257,22 @@ fn draw_settings_menu(f: &mut Frame, app: &mut App, area: Rect) {
 }
 
 /// Helper function to create a centered rect inside another rect
-fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
+fn centered_rect(width: u16, height: u16, r: Rect) -> Rect {
     let popup_layout = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Percentage((100 - percent_y) / 2),
-            Constraint::Percentage(percent_y),
-            Constraint::Percentage((100 - percent_y) / 2),
+            Constraint::Length(r.height.saturating_sub(height) / 2),
+            Constraint::Length(height),
+            Constraint::Length(r.height.saturating_sub(height) / 2),
         ])
         .split(r);
 
     Layout::default()
         .direction(Direction::Horizontal)
         .constraints([
-            Constraint::Percentage((100 - percent_x) / 2),
-            Constraint::Percentage(percent_x),
-            Constraint::Percentage((100 - percent_x) / 2),
+            Constraint::Length(r.width.saturating_sub(width) / 2),
+            Constraint::Length(width),
+            Constraint::Length(r.width.saturating_sub(width) / 2),
         ])
         .split(popup_layout[1])[1]
 }
@@ -292,7 +298,8 @@ fn handle_main_menu_input(app: &mut App, key: crossterm::event::KeyCode) {
             app.pause_submenu = None;
             // Fade music back to settings volume
             app.audio_manager.resume_music();
-            app.audio_manager.start_fade_in(0.5, app.settings.music_volume);
+            app.audio_manager
+                .start_fade_in(0.5, app.settings.music_volume);
         }
         KeyCode::Up => {
             if app.pause_menu_selection > 0 {
@@ -313,7 +320,8 @@ fn handle_main_menu_input(app: &mut App, key: crossterm::event::KeyCode) {
                     app.pause_submenu = None;
                     // Fade music back to settings volume
                     app.audio_manager.resume_music();
-                    app.audio_manager.start_fade_in(0.5, app.settings.music_volume);
+                    app.audio_manager
+                        .start_fade_in(0.5, app.settings.music_volume);
                 }
                 1 => {
                     // Volume
@@ -328,7 +336,8 @@ fn handle_main_menu_input(app: &mut App, key: crossterm::event::KeyCode) {
                     app.pause_submenu = Some(PauseSubmenu::Settings);
                 }
                 3 => {
-                    // Quit
+                    // Quit - save game before returning to menu
+                    let _ = app.save_game();
                     app.state = crate::app::AppState::MainMenu;
                     app.is_paused = false;
                     app.pause_menu_selection = 0;
@@ -361,7 +370,11 @@ fn handle_volume_input(app: &mut App, key: crossterm::event::KeyCode) {
                     // Sync to audio manager immediately
                     app.audio_manager.set_music_volume(app.music_volume);
                 }
-                1 => app.sound_volume = (app.sound_volume - 0.05).max(0.0),
+                1 => {
+                    app.sound_volume = (app.sound_volume - 0.05).max(0.0);
+                    // Sync to audio manager immediately
+                    app.audio_manager.set_sound_volume(app.sound_volume);
+                }
                 _ => {}
             }
         }
@@ -373,7 +386,11 @@ fn handle_volume_input(app: &mut App, key: crossterm::event::KeyCode) {
                     // Sync to audio manager immediately
                     app.audio_manager.set_music_volume(app.music_volume);
                 }
-                1 => app.sound_volume = (app.sound_volume + 0.05).min(1.0),
+                1 => {
+                    app.sound_volume = (app.sound_volume + 0.05).min(1.0);
+                    // Sync to audio manager immediately
+                    app.audio_manager.set_sound_volume(app.sound_volume);
+                }
                 _ => {}
             }
         }
@@ -435,6 +452,9 @@ fn handle_settings_input(app: &mut App, key: crossterm::event::KeyCode) {
                     17 => {
                         // Save changes
                         app.settings = app.pause_temp_settings.clone();
+                        // Update volume settings
+                        app.settings.music_volume = app.music_volume;
+                        app.settings.sound_volume = app.sound_volume;
                         let _ = app.settings.save();
                         app.pause_submenu = None;
                     }

@@ -259,8 +259,8 @@ impl App {
             pause_settings_state: pause_s,
             pause_temp_settings: s.clone(),
             pause_rebinding_mode: SettingsMode::Navigating,
-            music_volume: 0.5,
-            sound_volume: 0.5,
+            music_volume: s.music_volume,
+            sound_volume: s.sound_volume,
             audio_manager: audio_mgr,
             max_levels: 5, // Default, will be updated when game starts
             is_boss_level: false,

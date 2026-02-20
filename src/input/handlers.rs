@@ -254,12 +254,26 @@ pub fn handle_game_input(app: &mut App, key: crossterm::event::KeyEvent) {
 
     match key.code {
         KeyCode::Esc => {
-            // If inventory is focused, unfocus it instead of going to menu
+            // If inventory is focused, unfocus it instead of opening pause menu
             if app.inventory_focused {
                 app.inventory_focused = false;
                 app.inventory_scroll_index = 0;
             } else {
-                app.state = AppState::MainMenu;
+                // Open/close pause menu
+                app.is_paused = !app.is_paused;
+                if app.is_paused {
+                    // Initialize pause menu when entering pause
+                    app.pause_menu_selection = 0;
+                    app.pause_submenu = None;
+                    // Start fade-out: lower volume and muffled effect
+                    app.audio_manager.start_fade_in(0.5, 0.2); // 0.5 second transition to 0.2 volume
+                    app.audio_manager.pause_music();
+                } else {
+                    // Resume with fade-in back to settings volume
+                    app.audio_manager.resume_music();
+                    app.audio_manager
+                        .start_fade_in(0.5, app.settings.music_volume); // Fade back to settings volume
+                }
             }
         }
         KeyCode::Char(c) if c.is_ascii_digit() && c != '0' => {
